@@ -1,30 +1,23 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div id="app">
+    <nav>
+      <router-link to="/lists">Lists</router-link> |
+      <router-link to="/taskbank">Task Bank</router-link> |
+      <router-link to="/sessions">Sessions</router-link>
+    </nav>
+
+    <main>
+      <router-view />
+    </main>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
+<script setup lang="ts">
+// import HelloWorld from './components/HelloWorld.vue'
+</script>
+
+<style>
+nav { padding: .5rem; background:#f8f8f8; border-bottom:1px solid #eaeaea; }
+nav a { margin-right:.5rem; text-decoration:none; color:inherit; }
+main { padding:1rem; }
 </style>
