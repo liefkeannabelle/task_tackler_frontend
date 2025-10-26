@@ -1,9 +1,10 @@
+// ...existing code...
 <template>
   <div class="list-item-row">
     <div class="info">
       <span class="order">{{ item.orderNumber }}</span>
-      <span class="task">{{ item.task }}</span>
-      <small class="status">({{ item.taskStatus }})</small>
+      <span class="task">{{ displayName }}</span>
+      <small class="status">({{ item.taskStatus ?? '-' }})</small>
     </div>
     <div class="actions">
       <button @click="move(-1)">▲</button>
@@ -14,7 +15,31 @@
 </template>
 
 <script setup lang="ts">
+import { computed, watch } from 'vue';
+import { useTaskBankStore } from '../../stores/taskbank';
+
 const props = defineProps<{ listId: string; item: Record<string, any> }>();
+
+// debug
+console.log('ListItemRow props.item (setup):', props.item);
+watch(() => props.item, (newVal) => console.log('ListItemRow props.item (changed):', newVal), { immediate: true, deep: true });
+
+const taskBank = useTaskBankStore();
+
+// stable identifier (try multiple fields)
+const taskIdentifier = computed(() => {
+  const it = props.item as any;
+  return it.taskId ?? it._id ?? it.task ?? it.taskName ?? it.name ?? '';
+});
+
+// display name: prefer store lookup, then any name fields, then id
+const displayName = computed(() => {
+  const id = taskIdentifier.value;
+  const fromStore = id ? taskBank.getTaskName?.(id) : undefined;
+  const it = props.item as any;
+  return fromStore ?? it.taskName ?? it.task ?? it.name ?? id ?? '(unknown)';
+});
+
 const emit = defineEmits<{
   (e: 'delete-task', payload: { listId: string; taskId: string; deleter: string }): void;
   (e: 'assign-order', payload: { listId: string; taskId: string; newOrder: number; assigner: string }): void;
@@ -23,16 +48,15 @@ const emit = defineEmits<{
 function requestDelete() {
   const deleter = prompt('Your ID to delete this task:') || '';
   if (!deleter) return;
-  emit('delete-task', { listId: props.listId, taskId: props.item.task, deleter });
+  emit('delete-task', { listId: props.listId, taskId: taskIdentifier.value || displayName.value, deleter });
 }
 
 function move(direction: number) {
-  // naive move by ±1; prompt for assigner id
   const assigner = prompt('Your ID to reorder this task:') || '';
   if (!assigner) return;
   const newOrder = (props.item.orderNumber || 0) + direction;
   if (newOrder < 1) return;
-  emit('assign-order', { listId: props.listId, taskId: props.item.task, newOrder, assigner });
+  emit('assign-order', { listId: props.listId, taskId: taskIdentifier.value || displayName.value, newOrder, assigner });
 }
 </script>
 
