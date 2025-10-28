@@ -1,3 +1,4 @@
+// ...existing code...
 import { defineStore } from 'pinia';
 import type { SessionDocument, SessionListItem } from '../api/client';
 import {
@@ -18,6 +19,7 @@ import {
   getSessionForOwner,
   getActiveSessionForOwner
 } from '../api/client';
+import { useAuthStore } from './auth';
 
 export const useSessionStore = defineStore('session', {
   state: () => ({
@@ -29,18 +31,109 @@ export const useSessionStore = defineStore('session', {
     error: '' as string
   }),
   actions: {
-    async fetchSessions() {
+    // ...existing actions...
+
+    async randomizeOrder(payload: { session: string; randomizer?: string }) {
       this.loading = true;
       this.error = '';
+      const auth = useAuthStore();
       try {
-        const docs = await getSession({ session: '' } as any).catch(() => []);
-        this.sessions = Array.isArray(docs) ? docs : [];
+        const actor = payload.randomizer ?? auth.username;
+        if (!actor) throw new Error('Randomizer ID required (login or provide id).');
+        await randomizeSessionOrder({ session: payload.session, randomizer: actor });
+        await this.loadSessionListItems(payload.session);
       } catch (e: any) {
         this.error = e?.message ?? String(e);
+        throw e;
       } finally {
         this.loading = false;
       }
     },
+
+    async activateSession(payload: { session: string; activator?: string }) {
+      this.loading = true;
+      this.error = '';
+      const auth = useAuthStore();
+      try {
+        const actor = payload.activator ?? auth.username;
+        if (!actor) throw new Error('Activator required (login or provide activator).');
+        await activateSession({ session: payload.session, activator: actor });
+        await this.fetchActiveForOwner();
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async setOrdering(payload: { session: string; newType: string; setter?: string }) {
+      this.loading = true;
+      this.error = '';
+      const auth = useAuthStore();
+      try {
+        const actor = payload.setter ?? auth.username;
+        if (!actor) throw new Error('Setter required (login or provide setter).');
+        await setSessionOrdering({ session: payload.session, newType: payload.newType, setter: actor });
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async setFormat(payload: { session: string; newFormat: string; setter?: string }) {
+      this.loading = true;
+      this.error = '';
+      const auth = useAuthStore();
+      try {
+        const actor = payload.setter ?? auth.username;
+        if (!actor) throw new Error('Setter required (login or provide setter).');
+        await setSessionFormat({ session: payload.session, newFormat: payload.newFormat, setter: actor });
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async addListItem(payload: { session: string; task: string; defaultOrder?: number; adder?: string }) {
+      this.loading = true;
+      this.error = '';
+      const auth = useAuthStore();
+      try {
+        const actor = payload.adder ?? auth.username;
+        if (!actor) throw new Error('Adder required (login or provide adder).');
+        await addListItemToSession({ session: payload.session, task: payload.task, defaultOrder: payload.defaultOrder } as any);
+        await this.loadSessionListItems(payload.session);
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async activateSessionByOwner(owner?: string) {
+      // helper: use auth username if owner not provided
+      const auth = useAuthStore();
+      await this.fetchActiveForOwner(owner ?? auth.username);
+    },
+
+    async fetchSessions() {
+        this.loading = true;
+        this.error = '';
+        try {
+            const docs = await getSession({ session: '' } as any).catch(() => []);
+            this.sessions = Array.isArray(docs) ? docs : [];
+        } catch (e: any) {
+            this.error = e?.message ?? String(e);
+        } finally {
+            this.loading = false;
+        }
+        },
 
     async fetchByOwner(owner: string) {
       this.loading = true;
@@ -99,61 +192,6 @@ export const useSessionStore = defineStore('session', {
       try {
         await changeSession({ list: payload.list, sessionOwner: payload.sessionOwner });
         await this.fetchSessions();
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async setOrdering(payload: { session: string; newType: string; setter: string }) {
-      this.loading = true;
-      this.error = '';
-      try {
-        await setSessionOrdering(payload);
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async setFormat(payload: { session: string; newFormat: string; setter: string }) {
-      this.loading = true;
-      this.error = '';
-      try {
-        await setSessionFormat(payload);
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async randomizeOrder(payload: { session: string; randomizer: string }) {
-      this.loading = true;
-      this.error = '';
-      try {
-        await randomizeSessionOrder(payload);
-        await this.loadSessionListItems(payload.session);
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async activateSession(payload: { session: string; activator: string }) {
-      this.loading = true;
-      this.error = '';
-      try {
-        await activateSession(payload);
-        // refresh active session list; caller may pass owner to narrow results
-        await this.fetchActiveForOwner();
       } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;
@@ -226,21 +264,6 @@ export const useSessionStore = defineStore('session', {
           this.taskStatuses = {};
         }
         await this.fetchSessions();
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async addListItem(payload: { session: string; task: string; defaultOrder?: number }) {
-      this.loading = true;
-      this.error = '';
-      try {
-        if (!payload.session || !payload.task) return;
-        await addListItemToSession({ session: payload.session, task: payload.task, defaultOrder: payload.defaultOrder } as any);
-        await this.loadSessionListItems(payload.session);
       } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;

@@ -68,6 +68,12 @@ export async function newList(body: NewListRequest): Promise<NewListResponse> {
   return apiPost<NewListRequest, NewListResponse>('/ListCreation/newList', body);
 }
 
+/* POST /ListCreation/deleteList */
+export interface ListDeleteRequest { list: string; deleter?: string }
+export async function deleteList(body: ListDeleteRequest): Promise<{}> {
+  return apiPost<ListDeleteRequest, {}>('/ListCreation/deleteList', body);
+}
+
 /* POST /ListCreation/addTask */
 export interface ListAddTaskRequest { list: string; task: string; adder: string }
 export interface ListAddTaskResponse { listItem: ListItem }
@@ -161,6 +167,19 @@ export interface TaskBankEvaluateOrderRequest { owner: string; task1: string; ta
 export interface TaskBankEvaluateOrderResponse { orderValid: boolean }
 export async function evaluateTaskOrder(body: TaskBankEvaluateOrderRequest): Promise<TaskBankEvaluateOrderResponse[]> {
   return apiPost<TaskBankEvaluateOrderRequest, TaskBankEvaluateOrderResponse[]>('/TaskBank/_evaluateOrder', body);
+}
+
+/* POST /TaskBank/_getTasks */
+export interface TaskBankGetTasksRequest { owner?: string }
+export async function getTasks(body: TaskBankGetTasksRequest = {}): Promise<TaskDocument[]> {
+  return apiPost<TaskBankGetTasksRequest, TaskDocument[]>('/TaskBank/_getTasks', body);
+}
+
+/* POST /TaskBank/listTasks */
+export interface TaskBankListTasksRequest { owner?: string }
+export interface TaskBankListTasksResponse { tasks: TaskDocument[] } 
+export async function listTasks(body: TaskBankListTasksRequest): Promise<TaskBankListTasksResponse> {
+  return apiPost<TaskBankListTasksRequest, TaskBankListTasksResponse>('/TaskBank/listTasks', body);
 }
 
 // --- Session concept types & functions ---

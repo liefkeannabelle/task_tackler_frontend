@@ -1,3 +1,4 @@
+// ...existing code...
 <template>
   <div class="session-controls">
     <div class="row">
@@ -15,7 +16,7 @@
     <div class="row">
       <label>Ordering:</label>
       <input v-model="newOrdering" placeholder="ordering type" />
-      <input v-model="setter" placeholder="Your ID" />
+      <input v-model="setter" :placeholder="setterPlaceholder" />
       <button @click="setOrdering">Set</button>
 
       <label>Format:</label>
@@ -34,6 +35,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useAuthStore } from '../../stores/auth';
+
 const props = defineProps<{
   sessions: Array<Record<string, any>>;
   active: Record<string, any> | null;
@@ -51,13 +54,15 @@ const emit = defineEmits<{
   (e: 'delete', payload: { session: string }): void;
 }>();
 
+const auth = useAuthStore();
+
 const selected = ref(props.active ? (props.active._id || props.active.session) : '');
 watch(() => props.active, v => { selected.value = v ? (v._id || v.session) : ''; });
-
 const newOrdering = ref('');
 const newFormat = ref('');
-const setter = ref('');
-const actor = ref('');
+const setter = ref(auth.username || '');
+const setterPlaceholder = auth.username ? 'Your ID' : 'Your ID (login to default)';
+watch(() => auth.username, v => { if (v) setter.value = v; });
 
 function emitChange() {
   emit('change-active', selected.value || null);
@@ -65,7 +70,7 @@ function emitChange() {
 
 function create() {
   const list = prompt('List ID for new session:') || '';
-  const sessionOwner = prompt('Owner ID:') || '';
+  const sessionOwner = prompt('Owner ID:') || auth.username || '';
   if (!list || !sessionOwner) return;
   emit('create-session', { list, sessionOwner });
 }
@@ -82,14 +87,14 @@ function setFormat() {
 
 function randomize() {
   if (!selected.value) return;
-  const randomizer = prompt('Your ID to randomize:') || '';
+  const randomizer = auth.username || prompt('Your ID to randomize:') || '';
   if (!randomizer) return;
   emit('randomize', { session: selected.value, randomizer });
 }
 
 function activate() {
   if (!selected.value) return;
-  const activator = prompt('Your ID to activate:') || '';
+  const activator = auth.username || prompt('Your ID to activate:') || '';
   if (!activator) return;
   emit('activate', { session: selected.value, activator });
 }
@@ -110,3 +115,4 @@ function del() {
 .session-controls { border:1px solid #ddd; padding:.75rem; border-radius:6px; margin-bottom:.75rem; }
 .row { display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; }
 </style>
+// ...existing code...

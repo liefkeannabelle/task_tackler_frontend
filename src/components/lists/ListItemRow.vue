@@ -1,4 +1,3 @@
-// ...existing code...
 <template>
   <div class="list-item-row">
     <div class="info">
@@ -14,30 +13,36 @@
   </div>
 </template>
 
+// ...existing code...
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useTaskBankStore } from '../../stores/taskbank';
+import { useAuthStore } from '../../stores/auth';
+import type { ListItem } from '../../api/client';
 
-const props = defineProps<{ listId: string; item: Record<string, any> }>();
-
-// debug
-console.log('ListItemRow props.item (setup):', props.item);
-watch(() => props.item, (newVal) => console.log('ListItemRow props.item (changed):', newVal), { immediate: true, deep: true });
+const props = defineProps<{ listId: string; item: ListItem }>();
 
 const taskBank = useTaskBankStore();
+const auth = useAuthStore();
 
-// stable identifier (try multiple fields)
+// prefer item.name (new backend field), then nested task.name, then resolve via TaskBank, then id
 const taskIdentifier = computed(() => {
   const it = props.item as any;
-  return it.taskId ?? it._id ?? it.task ?? it.taskName ?? it.name ?? '';
+  return (it.task as string) ?? (it.taskId as string) ?? (it._id as string) ?? '';
 });
 
-// display name: prefer store lookup, then any name fields, then id
 const displayName = computed(() => {
-  const id = taskIdentifier.value;
-  const fromStore = id ? taskBank.getTaskName?.(id) : undefined;
   const it = props.item as any;
-  return fromStore ?? it.taskName ?? it.task ?? it.name ?? id ?? '(unknown)';
+  if (typeof it.name === 'string' && it.name.trim()) return it.name;
+  if (it.task && typeof it.task === 'object' && (it.task as any).taskName) return (it.task as any).taskName;
+  const id = taskIdentifier.value;
+  if (id) {
+    // try to find in loaded taskBank tasks
+    const found = (taskBank.tasks || []).find(t => (t as any)._id === id || (t as any).taskName === id);
+    if (found) return (found as any).taskName ?? (found as any).name ?? id;
+  }
+  // fallback to any direct label on item
+  return (it.taskName ?? it.name ?? id ?? '(unknown)') as string;
 });
 
 const emit = defineEmits<{
@@ -46,19 +51,34 @@ const emit = defineEmits<{
 }>();
 
 function requestDelete() {
-  const deleter = prompt('Your ID to delete this task:') || '';
+  const owner = props.listOwner ?? '';
+  const user = auth.username ?? '';
+
+  // If logged-in user is the owner, use it silently.
+  // Otherwise ask (or block) — backend requires deleter === owner.
+  let deleter = '';
+  if (user && owner && user === owner) {
+    deleter = user;
+  } else {
+    // optionally block instead of prompting:
+    // alert('Only the list owner can delete items. Please log in as the owner.');
+    deleter = prompt(`Please enter owner ID to confirm delete (owner: ${owner || 'unknown'}):`) || '';
+  }
+
   if (!deleter) return;
   emit('delete-task', { listId: props.listId, taskId: taskIdentifier.value || displayName.value, deleter });
 }
 
 function move(direction: number) {
-  const assigner = prompt('Your ID to reorder this task:') || '';
+  // prefer logged-in username; fallback to prompt for backwards compatibility
+  const assigner = auth.username || prompt('Your ID to reorder this task:') || '';
   if (!assigner) return;
   const newOrder = (props.item.orderNumber || 0) + direction;
   if (newOrder < 1) return;
   emit('assign-order', { listId: props.listId, taskId: taskIdentifier.value || displayName.value, newOrder, assigner });
 }
 </script>
+// ...existing code...
 
 <style scoped>
 .list-item-row { display:flex; justify-content:space-between; align-items:center; padding:.4rem; border-bottom:1px solid #eee; }

@@ -1,4 +1,4 @@
-## Planning Frontend
+# Planning Frontend
 
 ## Suggested folder structure
 - src/views/
