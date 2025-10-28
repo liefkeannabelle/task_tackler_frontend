@@ -6,7 +6,6 @@
       <button class="delete-list" @click="confirmDelete">Delete List</button>
     </header>
 
-    <!-- ...existing code... -->
     <div class="add-row">
       <!-- search box -->
       <input
@@ -39,7 +38,6 @@
       <input v-model="adder" :placeholder="adderPlaceholder" />
       <button @click="addTask" :disabled="!selectedTaskId || !adder">Add</button>
     </div>
-    <!-- ...existing code... -->
 
     <div v-if="items.length === 0" class="empty">No items</div>
 
@@ -58,93 +56,131 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
 import ListItemRow from './ListItemRow.vue';
+import { ref, computed, watch } from 'vue';
 import { useTaskBankStore } from '../../stores/taskbank';
 import { useAuthStore } from '../../stores/auth';
+import { useListsStore } from '../../stores/lists';
 
 const props = defineProps<{ list: Record<string, any> }>();
 const emit = defineEmits<{
-  (e: 'add-task', payload: { listId: string; task: string; adder: string }): void;
-  (e: 'delete-task', payload: { listId: string; taskId: string; deleter: string }): void;
-  (e: 'assign-order', payload: { listId: string; taskId: string; newOrder: number; assigner: string }): void;
+  (e: 'add-task', payload: { listId: string; task: string; adder?: string }): void;
+  (e: 'delete-task', payload: { listId: string; taskId: string; deleter?: string }): void;
+  (e: 'assign-order', payload: { listId: string; taskId: string; newOrder: number; assigner?: string }): void;
+  (e: 'list-deleted', payload: { listId: string }): void;
 }>();
 
 const taskBank = useTaskBankStore();
 const auth = useAuthStore();
+const listsStore = useListsStore();
 
+// UI state used by the template
 const search = ref('');
-const selectedTaskId = ref<string>('');
-const selectedTaskName = ref<string>('');
+const showResults = ref(false);
+const selectedTaskId = ref('');
+const selectedTaskName = ref('');
 const adder = ref(auth.username || '');
-const adderPlaceholder = auth.username ? 'Your ID' : 'Your ID (login to default)';
+const adderPlaceholder = computed(() => auth.username || 'your-id');
 watch(() => auth.username, v => { if (v) adder.value = v; });
 
-watch(() => taskBank.tasks, (t) => {
-  console.debug('[ListCard] taskBank.tasks updated length=', (t || []).length);
-  if ((t || []).length > 0) console.debug('[ListCard] first task sample', (t as any)[0]);
-}, { immediate: true });
+// list items safe accessor (avoids reading undefined)
+const items = computed(() => {
+  const li = props.list?.listItems;
+  return Array.isArray(li) ? li : [];
+});
 
-// items in this list
-const items = computed(() => props.list.listItems || props.list.items || []);
-
-// simple client-side filtering
+// filter TaskBank tasks by search query
 const filtered = computed(() => {
-  const q = (search.value || '').trim().toLowerCase();
-  if (!q) return taskBank.tasks.slice(0, 20);
-  return taskBank.tasks.filter(t => {
-    const name = ((t as any).taskName ?? (t as any).name ?? '').toString().toLowerCase();
-    const id = ((t as any)._id ?? '').toString().toLowerCase();
+  const q = (search.value || '').toLowerCase().trim();
+  const all = taskBank.tasks ?? [];
+  if (!q) return all.slice(0, 20);
+  return all.filter((t: any) => {
+    const name = (t.taskName ?? t.name ?? '').toString().toLowerCase();
+    const id = (t._id ?? '').toString().toLowerCase();
     return name.includes(q) || id.includes(q);
   }).slice(0, 50);
 });
 
-const showResults = computed(() => search.value.trim().length > 0);
-
-// actions
-function onSearch() {
-  selectedTaskId.value = '';
-  selectedTaskName.value = '';
-}
-
+// select a task from results
 function selectTask(t: any) {
-  selectedTaskId.value = t._id ?? t.task ?? t.taskId ?? t.taskName ?? '';
-  selectedTaskName.value = t.taskName ?? t.name ?? selectedTaskId.value;
-  search.value = '';
+  selectedTaskId.value = t._id ?? t.task ?? t.taskId ?? '';
+  selectedTaskName.value = t.taskName ?? t.name ?? '';
+  search.value = selectedTaskName.value || '';
+  showResults.value = false;
 }
 
-function selectFirstIfAny() {
-  if (filtered.value.length > 0) selectTask(filtered.value[0] as any);
-}
-
+// clear selection UI
 function clearSelection() {
   selectedTaskId.value = '';
   selectedTaskName.value = '';
   search.value = '';
+  showResults.value = false;
 }
 
+// emit add-task after validation
 function addTask() {
-  if (!selectedTaskId.value || !adder.value) return;
-  emit('add-task', { listId: props.list._id || props.list.list, task: selectedTaskId.value, adder: adder.value });
+  if (!selectedTaskId.value) {
+    alert('Please select a task from the results (do not type free text).');
+    return;
+  }
+  const listId = props.list._id ?? props.list.list;
+  if (!listId) {
+    alert('Cannot determine list id.');
+    return;
+  }
+  emit('add-task', { listId, task: selectedTaskId.value, adder: adder.value || undefined });
   clearSelection();
-}
-
-function confirmDelete() {
-  const label = list.title || list.listName || list._id || 'this list';
-  if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
-  // call store; store will use auth.username if available
-  listsStore.deleteList(list._id || list.list).catch((err) => {
-    alert('Delete failed: ' + (err?.message ?? String(err)));
-  });
 }
 
 function forwardDelete(payload: any) { emit('delete-task', payload); }
 function forwardAssign(payload: any) { emit('assign-order', payload); }
+
+// show results while typing
+function onSearch() {
+  showResults.value = !!(search.value && search.value.trim());
+}
+
+// select first result when Enter is pressed
+function selectFirstIfAny() {
+  if (filtered.value && filtered.value.length > 0) {
+    selectTask(filtered.value[0]);
+  }
+}
+
+watch(search, (v) => {
+  showResults.value = !!(v && v.trim());
+});
+
+// confirm and delete list using store; emit event on success
+async function confirmDelete() {
+  try {
+    console.debug('[ListCard] confirmDelete clicked', props.list);
+    const current = props.list;
+    const label = current.title || current.listName || current._id || 'this list';
+    if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+    const id = current._id || current.list;
+    if (!id) {
+      console.warn('[ListCard] cannot determine list id', current);
+      alert('Cannot determine list id to delete.');
+      return;
+    }
+
+    console.debug('[ListCard] calling listsStore.deleteList', id);
+    await listsStore.deleteList(id);
+    console.debug('[ListCard] deleteList succeeded for', id);
+    emit('list-deleted', { listId: id });
+  } catch (err: any) {
+    console.error('[ListCard] deleteList failed', err);
+    alert('Delete failed: ' + (err?.message ?? String(err)));
+  }
+}
 </script>
 
 <style scoped>
 .list-card { border:1px solid #ddd; padding: .75rem; border-radius:6px; margin-bottom:.75rem; }
-.card-header { display:flex; justify-content:space-between; align-items:center; }
+.card-header { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+.delete-list { margin-left:.5rem; color:#fff; background:#c33; border:none; padding:.25rem .5rem; border-radius:4px; cursor:pointer; }
 .add-row { display:flex; gap:.5rem; margin:.5rem 0; position:relative; align-items:center; }
 .add-row input { padding:.25rem .5rem; }
 .results { position:absolute; top:2.6rem; left:0; right:0; max-height:12rem; overflow:auto; background:white; border:1px solid #ccc; z-index:10; margin:0; padding:0; list-style:none; }

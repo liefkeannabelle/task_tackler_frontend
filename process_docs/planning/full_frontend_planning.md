@@ -11,3 +11,12 @@ Would like to be able to "login" at the beginning and go from there
 Would need to happen after authentication has been added, but would like to see the set of tasks that the user already has
 
 - Need to completely rework the session start screen
+
+Done: 
+- Authentication
+- Task bank visible
+- Got deleteList working
+
+Right now: 
+- Need to make lists only visible when you are the owner
+- Remove need to give username for delete (prob same process as for add)

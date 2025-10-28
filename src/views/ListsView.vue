@@ -23,33 +23,30 @@ const taskBank = useTaskBankStore();
 const auth = useAuthStore();
 
 onMounted(async () => {
-  // load lists and task bank (optionally scoped to the logged-in user)
   await Promise.all([
     store.fetchAll(),
+    // fetch task bank (pass owner if backend expects it)
     taskBank.fetchAll(auth.username || undefined)
   ]);
 });
 
-async function createList(payload: { name: string; owner: string }) {
+async function createList(payload: { name: string; owner?: string }) {
   await store.create(payload.name, payload.owner);
 }
 
 async function onAddTask(payload: { listId: string; task: string; adder?: string }) {
-  const { listId, task, adder } = payload;
-  if (!listId || !task) return;
-  await store.addTask(listId, task, adder);
+  if (!payload?.listId || !payload?.task) return;
+  await store.addTask(payload.listId, payload.task, payload.adder);
 }
 
 async function onDeleteTask(payload: { listId: string; taskId: string; deleter?: string }) {
-  const { listId, taskId, deleter } = payload;
-  if (!listId || !taskId) return;
-  await store.removeTask(listId, taskId, deleter);
+  if (!payload?.listId || !payload?.taskId) return;
+  await store.removeTask(payload.listId, payload.taskId, payload.deleter);
 }
 
 async function onAssignOrder(payload: { listId: string; taskId: string; newOrder: number; assigner?: string }) {
-  const { listId, taskId, newOrder, assigner } = payload;
-  if (!listId || !taskId || typeof newOrder !== 'number') return;
-  await store.assignOrder(listId, taskId, newOrder, assigner);
+  if (!payload?.listId || !payload?.taskId || typeof payload.newOrder !== 'number') return;
+  await store.assignOrder(payload.listId, payload.taskId, payload.newOrder, payload.assigner);
 }
 </script>
 
