@@ -22,12 +22,26 @@ const store = useListsStore();
 const taskBank = useTaskBankStore();
 const auth = useAuthStore();
 
+// top-level log runs when the module loads
+console.debug('[ListsView] module loaded, auth snapshot:', {
+  username: auth?.username,
+  id: (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId,
+  full: auth
+});
+
 onMounted(async () => {
-  await Promise.all([
-    store.fetchAll(),
-    // fetch task bank (pass owner if backend expects it)
-    taskBank.fetchAll(auth.username || undefined)
-  ]);
+  try {
+    console.debug('auth store snapshot:', {
+      username: auth.username,
+      id: (auth as any)._id ?? (auth as any).id ?? (auth as any).userId,
+      full: auth})
+    await Promise.all([
+      store.fetchAll(auth.username || undefined), // pass owner so backend filters
+      taskBank.fetchAll(auth.username || undefined)
+    ]);
+  } catch (e) {
+    console.error('initial data load failed', e);
+  }
 });
 
 async function createList(payload: { name: string; owner?: string }) {

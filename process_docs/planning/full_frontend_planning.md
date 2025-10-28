@@ -16,7 +16,9 @@ Done:
 - Authentication
 - Task bank visible
 - Got deleteList working
+- Make lists only visible when you are the owner
+
 
 Right now: 
-- Need to make lists only visible when you are the owner
 - Remove need to give username for delete (prob same process as for add)
+- Remove task statuses on lists

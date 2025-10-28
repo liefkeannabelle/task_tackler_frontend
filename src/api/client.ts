@@ -104,17 +104,34 @@ export async function getListById(body: GetListByIdRequest): Promise<ListDocumen
   return apiPost<GetListByIdRequest, ListDocument[]>('/ListCreation/_getListById', body);
 }
 
-/* POST /ListCreation/_getListsByOwner */
-export interface GetListsByOwnerRequest { ownerId: string }
-export async function getListsByOwner(body: GetListsByOwnerRequest): Promise<ListDocument[]> {
-  return apiPost<GetListsByOwnerRequest, ListDocument[]>('/ListCreation/_getListsByOwner', body);
-}
+// /* POST /ListCreation/_getListsByOwner */
+// export interface GetListsByOwnerRequest { ownerId: string }
+// export async function getListsByOwner(body: GetListsByOwnerRequest): Promise<ListDocument[]> {
+//   return apiPost<GetListsByOwnerRequest, ListDocument[]>('/ListCreation/_getListsByOwner', body);
+// }
 
 /* POST /ListCreation/_getTasksInList */
 export interface GetTasksInListRequest { listId: string }
 export async function getTasksInList(body: GetTasksInListRequest): Promise<ListItem[]> {
   return apiPost<GetTasksInListRequest, ListItem[]>('/ListCreation/_getTasksInList', body);
 }
+
+// /* POST /ListCreation/getListsByOwner */
+// export interface ListCreationGetListsByOwnerRequest { owner: string }
+// export interface ListCreationGetListsByOwnerResponse { lists: any[] }
+// export async function getListsByOwner(body: ListCreationGetListsByOwnerRequest): Promise<ListCreationGetListsByOwnerResponse> {
+//   return apiPost<ListCreationGetListsByOwnerRequest, ListCreationGetListsByOwnerResponse>('/ListCreation/getListsByOwner', body);
+// }
+// ...existing code...
+/* POST /ListCreation/getListsByOwner */
+export interface ListCreationGetListsByOwnerRequest { owner: string }
+export interface ListCreationGetListsByOwnerResponse { lists: any[] }
+
+export async function getListsByOwner(body: ListCreationGetListsByOwnerRequest): Promise<ListCreationGetListsByOwnerResponse> {
+  // backend exposes _getListsByOwner under /api
+  return apiPost<ListCreationGetListsByOwnerRequest, ListCreationGetListsByOwnerResponse>('/ListCreation/getListsByOwner', body);
+}
+// ...existing code...
 
 // --- TaskBank concept types & functions ---
 

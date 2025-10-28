@@ -368,6 +368,28 @@ export default class ListCreationConcept {
   }
 
   /**
+   * @query getListsByOwner
+   * Returns all lists owned by the provided user id. This mirrors `_getListsByOwner`
+   * but uses the `owner` param name which is convenient for frontend calls.
+   *
+   * @param {object} params - The query arguments.
+   * @param {User} params.owner - The ID of the user whose lists to retrieve.
+   * @returns {{ lists: ListDocument[] } | { error: string }}
+   */
+  async getListsByOwner(
+    { owner }: { owner: User },
+  ): Promise<{ lists: ListDocument[] } | { error: string }> {
+    try {
+      const lists = await this.lists.find({ owner }).toArray();
+      return { lists };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Error getting lists by owner:", e);
+      return { error: `Failed to get lists: ${msg}` };
+    }
+  }
+
+  /**
    * @query _getTasksInList
    * Returns all list items (tasks) for a given list, sorted by their orderNumber.
    *
@@ -386,7 +408,6 @@ export default class ListCreationConcept {
     // A shallow copy is made before sorting to avoid modifying the original array if it were stored directly.
     return [...list.listItems].sort((a, b) => a.orderNumber - b.orderNumber);
   }
-
 
   /**
    * @action deleteList
@@ -421,4 +442,5 @@ export default class ListCreationConcept {
     return {};
   }
 }
+
 ```

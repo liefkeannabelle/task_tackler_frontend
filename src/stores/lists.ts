@@ -10,7 +10,7 @@ import {
   assignOrderInList,
   getTasksInList,
   getListById,
-  getListsByOwner
+  getListsByOwner as apiGetListsByOwner
 } from '../api/client';
 import { useAuthStore } from './auth';
 
@@ -21,17 +21,67 @@ export const useListsStore = defineStore('lists', {
     error: '' as string
   }),
   actions: {
-    async fetchAll() {
+    async fetchAll(owner?: string) {
       this.loading = true;
       this.error = '';
       try {
-        this.lists = await getLists();
+        let docs: any[] = [];
+
+        // if caller provided an owner identifier, try the owner-scoped backend endpoint first
+        if (owner && owner.toString().trim()) {
+          try {
+            // backend `_getListsByOwner` may expect ownerId — call the API and accept either array or { lists: [] }
+            const res: any = await apiGetListsByOwner({ owner: owner.toString().trim() });
+            if (Array.isArray(res)) {
+              docs = res;
+            } else if (Array.isArray(res?.lists)) {
+              docs = res.lists;
+            } else {
+              docs = [];
+            }
+          } catch (e) {
+            // owner endpoint failed (404 or other) — fall back to global list fetch below
+            console.warn('[lists] getListsByOwner failed, falling back to getLists()', e);
+            const raw = await getLists();
+            docs = Array.isArray(raw) ? raw : [];
+          }
+        } else {
+          // no owner provided: fetch global lists
+          const raw = await getLists();
+          docs = Array.isArray(raw) ? raw : [];
+        }
+
+        // client-side safety filter: only keep lists that belong to the logged-in user
+        const auth = useAuthStore();
+        const userId = (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
+        const username = auth?.username;
+
+        if (userId || username) {
+          this.lists = docs.filter((d: any) => {
+            // check several common owner fields
+            const ownerField = d.owner ?? d.listOwner ?? d.ownerId ?? d.userId;
+            return ownerField === username || ownerField === userId || ownerField === (username ?? userId);
+          });
+        } else {
+          // no auth info — default to empty set to avoid leaking lists
+          this.lists = [];
+        }
+
+        // optional enrichment if implemented elsewhere
+        if (typeof (this as any)._enrichListItems === 'function') {
+          await (this as any)._enrichListItems();
+        }
+
+        return this.lists;
       } catch (e: any) {
         this.error = e?.message ?? String(e);
+        this.lists = [];
+        throw e;
       } finally {
         this.loading = false;
       }
     },
+ // ...existing code...
 
     async create(name: string, ownerId?: string) {
       this.loading = true;
@@ -41,7 +91,7 @@ export const useListsStore = defineStore('lists', {
         const owner = ownerId ?? auth.username;
         if (!owner) throw new Error('Owner required (login or supply ownerId).');
         await newList({ listName: name, listOwner: owner });
-        await this.fetchAll();
+        await this.fetchAll(owner);
       } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;
@@ -59,6 +109,7 @@ export const useListsStore = defineStore('lists', {
         if (!actor) throw new Error('Adder required (login or provide adder).');
         const res = await addTaskToList({ list: listId, task, adder: actor });
         await this.refreshList(listId);
+        await this.fetchAll(auth.username);
         return res;
       } catch (e: any) {
         this.error = e?.message ?? String(e);
@@ -76,8 +127,8 @@ export const useListsStore = defineStore('lists', {
         const actor = deleter ?? auth.username;
         if (!actor) throw new Error('Deleter required (login or provide deleter).');
         await deleteTaskFromList({ list: listId, task, deleter: actor });
-        await this.refreshList(listId);
-      } catch (e: any) {
+        await this.fetchAll(auth.username);
+    } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;
       } finally {
@@ -93,8 +144,8 @@ export const useListsStore = defineStore('lists', {
         const actor = assigner ?? auth.username;
         if (!actor) throw new Error('Assigner required (login or provide assigner).');
         await assignOrderInList({ list: listId, task, newOrder, assigner: actor } as any);
-        await this.refreshList(listId);
-      } catch (e: any) {
+        await this.fetchAll(auth.username);
+    } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;
       } finally {
@@ -129,8 +180,9 @@ export const useListsStore = defineStore('lists', {
         const actor = deleter ?? auth.username;
         if (!actor) throw new Error('Deleter required (login or provide deleter).');
         await apiDeleteList({ list: listId, deleter: actor });
+        await this.fetchAll(auth.username);
         // remove locally to keep UI in sync
-        this.lists = this.lists.filter(l => ((l as any)._id ?? (l as any).list) !== listId);
+        // this.lists = this.lists.filter(l => ((l as any)._id ?? (l as any).list) !== listId);
       } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;
