@@ -10,9 +10,124 @@ import {
   assignOrderInList,
   getTasksInList,
   getListById,
-  getListsByOwner as apiGetListsByOwner
+  getListsByOwner as apiGetListsByOwner,
+  assignOrderInList as apiAssignOrder
 } from '../api/client';
 import { useAuthStore } from './auth';
+import { useTaskBankStore } from './taskbank';
+
+// helper functions for dependency relation semantics
+function relationRequiresEarlier(relation: string) {
+  // returns true if the depTask must appear earlier than the subject task
+  return relation === 'REQUIRES' || relation === 'BLOCKED_BY' || relation === 'FOLLOWS';
+}
+function relationRequiresLater(relation: string) {
+  // returns true if the depTask must appear later than the subject task
+  return relation === 'REQUIRED_BY' || relation === 'BLOCKS' || relation === 'PRECEDES';
+}
+
+/**
+ * Validate that moving `taskId` to `newOrder` within the listItems doesn't violate dependencies.
+ * listItems: Array of { task: string, orderNumber: number, name?: string }
+ * tasksById: Map of taskId -> task object (task.dependencies is array of {depTask,depRelation})
+ */
+// ...existing code...
+function validateOrderConstraints(
+  listItems: any[] | undefined,
+  taskId: string,
+  newOrder: number,
+  tasksById: Map<string, any> | undefined
+): { valid: boolean; message?: string } {
+  // normalize inputs
+  const itemsInput = Array.isArray(listItems) ? listItems : [];
+  const tasksMap = tasksById ?? new Map<string, any>();
+
+  // build minimal items array (guarding missing fields)
+  const items = itemsInput
+    .map((it: any) => ({ task: it?.task, orderNumber: Number(it?.orderNumber ?? 0) }))
+    .filter((it: any) => typeof it.task === 'string');
+
+  const moving = items.find(i => i.task === taskId);
+  if (!moving) return { valid: false, message: 'Task not found in list.' };
+
+  // remove the moving item and reinsert with newOrder
+  const without = items.filter(i => i.task !== taskId);
+
+  // determine insert index (clamp)
+  const insertIndex = Math.max(0, Math.min(without.length, Number(newOrder) - 1));
+  without.splice(insertIndex, 0, { task: taskId, orderNumber: Number(newOrder) });
+
+  // reassign contiguous order numbers
+  for (let i = 0; i < without.length; i++) {
+    const item = without[i];
+    if (!item) continue;
+    item.orderNumber = i + 1;
+  }
+
+  const orderMap = new Map<string, number>();
+  for (const it of without) {
+    if (it?.task) orderMap.set(it.task, Number(it.orderNumber));
+  }
+
+  // helper relation checks (same logic as before)
+  const relationRequiresEarlier = (r: string) => ['REQUIRES','BLOCKED_BY','FOLLOWS'].includes(r);
+  const relationRequiresLater = (r: string) => ['REQUIRED_BY','BLOCKS','PRECEDES'].includes(r);
+
+  function labelFor(id: string) {
+    const t = tasksMap.get(id);
+    return t ? (t.taskName ?? t.name ?? id) : id;
+  }
+
+  // validate subject dependencies
+  for (const it of without) {
+    const subj = it.task;
+    const subjOrder = orderMap.get(subj);
+    if (subjOrder === undefined) continue;
+    const taskObj = tasksMap.get(subj);
+    const deps = Array.isArray(taskObj?.dependencies) ? taskObj.dependencies : [];
+    for (const d of deps) {
+      const depTask = d?.depTask;
+      const rel = d?.depRelation;
+      if (!depTask || !rel) continue;
+      const depOrder = orderMap.get(depTask);
+      if (depOrder === undefined) continue;
+      if (relationRequiresEarlier(rel) && !(depOrder < subjOrder)) {
+        return { valid: false, message: `Dependency violated: '${labelFor(depTask)}' must appear before '${labelFor(subj)}' (${rel}).` };
+      }
+      if (relationRequiresLater(rel) && !(depOrder > subjOrder)) {
+        return { valid: false, message: `Dependency violated: '${labelFor(depTask)}' must appear after '${labelFor(subj)}' (${rel}).` };
+      }
+    }
+  }
+
+  // validate reverse dependencies
+  for (const [otherId, otherTaskObj] of tasksMap.entries()) {
+    if (!orderMap.has(otherId)) continue;
+    const otherDeps = Array.isArray(otherTaskObj?.dependencies) ? otherTaskObj.dependencies : [];
+    for (const od of otherDeps) {
+      if (od?.depTask === undefined || od?.depRelation === undefined) continue;
+      const subj = od.depTask;
+      if (!orderMap.has(subj)) continue;
+      const rel = od.depRelation;
+      const subjOrder = orderMap.get(subj)!;
+      const otherOrder = orderMap.get(otherId)!;
+      if (relationRequiresLater(rel) && !(subjOrder < otherOrder)) {
+        return { valid: false, message: `Dependency violated: '${labelFor(subj)}' must appear before '${labelFor(otherId)}' (${rel}).` };
+      }
+      if (relationRequiresEarlier(rel) && !(subjOrder > otherOrder)) {
+        return { valid: false, message: `Dependency violated: '${labelFor(subj)}' must appear after '${labelFor(otherId)}' (${rel}).` };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+// ...existing code...
+
+function labelFor(id: string, tasksById: Map<string, any>) {
+  const t = tasksById.get(id);
+  return t ? (t.taskName ?? t.name ?? id) : id;
+}
 
 export const useListsStore = defineStore('lists', {
   state: () => ({
@@ -21,43 +136,43 @@ export const useListsStore = defineStore('lists', {
     error: '' as string
   }),
   actions: {
-    async fetchAll(owner?: string) {
-      this.loading = true;
-      this.error = '';
-      try {
-        // always fetch the global list set from the backend (more reliable)
-        const raw = await getLists();
-        const docs = Array.isArray(raw) ? raw : [];
+    // async fetchAll(owner?: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   try {
+    //     // always fetch the global list set from the backend (more reliable)
+    //     const raw = await getLists();
+    //     const docs = Array.isArray(raw) ? raw : [];
 
-        // determine auth identifiers to filter by
-        const auth = useAuthStore();
-        const userId = (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
-        const username = auth?.username;
+    //     // determine auth identifiers to filter by
+    //     const auth = useAuthStore();
+    //     const userId = (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
+    //     const username = auth?.username;
 
-        if (userId || username) {
-          this.lists = docs.filter((d: any) => {
-            const ownerField = d.owner ?? d.listOwner ?? d.ownerId ?? d.userId;
-            return ownerField === username || ownerField === userId;
-          });
-        } else {
-          // no auth info -> show nothing (prevent leaking other users' lists)
-          this.lists = [];
-        }
+    //     if (userId || username) {
+    //       this.lists = docs.filter((d: any) => {
+    //         const ownerField = d.owner ?? d.listOwner ?? d.ownerId ?? d.userId;
+    //         return ownerField === username || ownerField === userId;
+    //       });
+    //     } else {
+    //       // no auth info -> show nothing (prevent leaking other users' lists)
+    //       this.lists = [];
+    //     }
 
-        // optional enrichment hook
-        if (typeof (this as any)._enrichListItems === 'function') {
-          await (this as any)._enrichListItems();
-        }
+    //     // optional enrichment hook
+    //     if (typeof (this as any)._enrichListItems === 'function') {
+    //       await (this as any)._enrichListItems();
+    //     }
 
-        return this.lists;
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        this.lists = [];
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
+    //     return this.lists;
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     this.lists = [];
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
     // async fetchAll(owner?: string) {
     //   this.loading = true;
     //   this.error = '';
@@ -173,22 +288,22 @@ export const useListsStore = defineStore('lists', {
       }
     },
 
-    async assignOrder(listId: string, task: string, newOrder: number, assigner?: string) {
-      this.loading = true;
-      this.error = '';
-      const auth = useAuthStore();
-      try {
-        const actor = assigner ?? auth.username;
-        if (!actor) throw new Error('Assigner required (login or provide assigner).');
-        await assignOrderInList({ list: listId, task, newOrder, assigner: actor } as any);
-        await this.fetchAll(auth.username);
-    } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
+    // async assignOrder(listId: string, task: string, newOrder: number, assigner?: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   const auth = useAuthStore();
+    //   try {
+    //     const actor = assigner ?? auth.username;
+    //     if (!actor) throw new Error('Assigner required (login or provide assigner).');
+    //     await assignOrderInList({ list: listId, task, newOrder, assigner: actor } as any);
+    //     await this.fetchAll(auth.username);
+    // } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
 
     // ...existing code...
     async refreshList(listId: string) {
@@ -209,26 +324,62 @@ export const useListsStore = defineStore('lists', {
         await this.fetchAll();
       }
     },
+    // ...existing code...
+
+    async fetchAll(owner?: string) {
+      this.loading = true;
+      this.error = '';
+      try {
+        const auth = useAuthStore();
+        const username = auth?.username;
+
+        // Prefer owner-scoped backend call (backend accepts username or owner id)
+        if (username) {
+          const ownerId =  (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
+          const payload: any = ownerId ? {ownerId} : {owner : username ?? (auth as any)?.username };
+          const res: any = await apiGetListsByOwner(payload);
+          if (res && Array.isArray(res.lists)) {
+            this.lists = res.lists;
+          } else {
+            this.lists = [];
+          }
+        } else {
+          // fallback to global fetch (should not happen for logged-in flows)
+          const raw = await getLists();
+          this.lists = Array.isArray(raw) ? raw : [];
+        }
+
+        if (typeof (this as any)._enrichListItems === 'function') {
+          await (this as any)._enrichListItems();
+        }
+
+        return this.lists;
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        this.lists = [];
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async deleteList(listId: string, deleter?: string) {
       this.loading = true;
       this.error = '';
       const auth = useAuthStore();
       const prev = [...this.lists]; // snapshot so we can restore on failure
       try {
-        // prefer sending username (backend resolves it to an id), fall back to explicit deleter param
         const payloadUsername = auth.username ?? deleter;
         if (!payloadUsername) throw new Error('Deleter required (login or provide deleter).');
 
-        // optimistic local removal so UI updates immediately
+        // optimistic local removal
         this.lists = this.lists.filter(l => ((l as any)._id ?? (l as any).list) !== listId);
 
-        // call API with the expected keys: { listId, username }
+        // call API — client normalizes payload if needed
         await apiDeleteList({ list: listId, deleter: payloadUsername });
 
-        // success: keep optimistic removal (no full refetch here)
         return {};
       } catch (e: any) {
-        // restore previous state on error
         this.lists = prev;
         this.error = e?.message ?? String(e);
         console.error('[lists] deleteList error', e);
@@ -236,7 +387,120 @@ export const useListsStore = defineStore('lists', {
       } finally {
         this.loading = false;
       }
-    }
+    },
+
+// ...existing code...
+    async assignOrder(listId: string, task: string, newOrder: number, assigner?: string) {
+      this.loading = true;
+      this.error = '';
+      const auth = useAuthStore();
+      const taskBank = useTaskBankStore();
+      try {
+        const actor = assigner ?? auth.username;
+        if (!actor) throw new Error('Assigner required (login or provide assigner).');
+
+        const target = this.lists.find(l => ((l as any)._id ?? (l as any).list) === listId);
+        if (!target) throw new Error('List not found locally.');
+
+        // normalize listItems so it's never undefined
+        const listItems = Array.isArray((target as any).listItems) ? (target as any).listItems : [];
+
+        // build tasksById map from taskBank.tasks
+        const tasksById = new Map<string, any>();
+        (taskBank.tasks || []).forEach((t: any) => tasksById.set(t._id, t));
+
+        // validate using local dependency info (pass normalized listItems)
+        const check = validateOrderConstraints(listItems, task, newOrder, tasksById);
+        if (!check.valid) {
+          alert(check.message ?? 'Invalid ordering due to dependencies.');
+          throw new Error(check.message);
+        }
+
+        // call API for authoritative change
+        await apiAssignOrder({ list: listId, task, newOrder, assigner: actor });
+
+        const ownerId = (auth as any)?._id ?? (auth as any)?.id ?? auth.username;
+        await this.fetchAll(ownerId || undefined);
+
+        return {};
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+// ...existing code...
+
+// ...existing code...
+    // async deleteList(listId: string, deleter?: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   const auth = useAuthStore();
+    //   const prev = [...this.lists]; // snapshot so we can restore on failure
+    //   try {
+    //     // prefer sending username (backend resolves it to an id), fall back to explicit deleter param
+    //     const payloadUsername = auth.username ?? deleter;
+    //     if (!payloadUsername) throw new Error('Deleter required (login or provide deleter).');
+
+    //     // optimistic local removal so UI updates immediately
+    //     this.lists = this.lists.filter(l => ((l as any)._id ?? (l as any).list) !== listId);
+
+    //     // call API with the expected keys: { listId, username }
+    //     await apiDeleteList({ list: listId, deleter: payloadUsername });
+
+    //     // success: keep optimistic removal (no full refetch here)
+    //     return {};
+    //   } catch (e: any) {
+    //     // restore previous state on error
+    //     this.lists = prev;
+    //     this.error = e?.message ?? String(e);
+    //     console.error('[lists] deleteList error', e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // }, 
+    // async assignOrder(listId: string, task: string, newOrder: number, assigner?: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   const auth = useAuthStore();
+    //   const taskBank = useTaskBankStore();
+    //   try {
+    //     const actor = assigner ?? auth.username;
+    //     if (!actor) throw new Error('Assigner required (login or provide assigner).');
+
+    //     // find the list locally
+    //     const target = this.lists.find(l => ((l as any)._id ?? (l as any).list) === listId);
+    //     if (!target) throw new Error('List not found locally.');
+
+    //     // build tasksById map for tasks present in the list
+    //     const tasksById = new Map<string, any>();
+    //     (taskBank.tasks || []).forEach((t: any) => tasksById.set(t._id, t));
+
+    //     // validate using local dependency info
+    //     const check = validateOrderConstraints(target.listItems || target.listItems, task, newOrder, tasksById);
+    //     if (!check.valid) {
+    //       // show friendly message and abort
+    //       alert(check.message ?? 'Invalid ordering due to dependencies.');
+    //       throw new Error(check.message);
+    //     }
+
+    //     // call API to perform authoritative change
+    //     await apiAssignOrder({ list: listId, task, newOrder, assigner: actor });
+
+    //     // refresh owner-scoped lists to pick up authoritative change
+    //     const ownerId = (auth as any)?._id ?? (auth as any)?.id ?? auth.username;
+    //     await this.fetchAll(ownerId || undefined);
+
+    //     return {};
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // }
     // },
     // async deleteList(listId: string, deleter?: string) {
     //   this.loading = true;

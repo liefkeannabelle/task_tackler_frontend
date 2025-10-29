@@ -10,15 +10,16 @@ Frontend = npm run dev
 - Added tasks by dropdown 
 - Made user's task bank visible
 - Made lists only visible when you are the owner
-
+- Fixed deleteList
+- Removed username prompt box on deleteTask
+- Removed task statuses on lists
+- Fixed dependencies on task bank page
+- Enforce dependencies when making list ordering
 
 ## To do: 
 ### Today's focus:
-- Fix deleteList
-- Remove need to give username for delete task (prob same process as for add) 
-- Remove task statuses on lists
+- Reword dependencies page to make more intuitive
 ### In coming days:
-- Fix adding dependencies (button doesn't do anything on the frontend)
 - Fix session interface
     - Make selecting list a dropdown
     - Make format and ordering type dropdowns
