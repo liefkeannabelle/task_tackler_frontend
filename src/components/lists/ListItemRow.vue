@@ -55,14 +55,12 @@ function requestDelete() {
   const user = auth.username ?? '';
 
   // If logged-in user is the owner, use it silently.
-  // Otherwise ask (or block) — backend requires deleter === owner.
-  let deleter = '';
-  if (user && owner && user === owner) {
-    deleter = user;
-  } else {
-    // optionally block instead of prompting:
-    // alert('Only the list owner can delete items. Please log in as the owner.');
-    deleter = prompt(`Please enter owner ID to confirm delete (owner: ${owner || 'unknown'}):`) || '';
+  // Otherwise ask (or block) — backend requires deleter === owner
+
+  const deleter = auth.username ?? '';
+  if (!deleter) {
+    alert('Please log in to delete items.');
+    return;
   }
 
   if (!deleter) return;

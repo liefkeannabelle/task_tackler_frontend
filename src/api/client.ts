@@ -69,9 +69,14 @@ export async function newList(body: NewListRequest): Promise<NewListResponse> {
 }
 
 /* POST /ListCreation/deleteList */
-export interface ListDeleteRequest { list: string; deleter?: string }
+export interface ListDeleteRequest { list?: string; listId?: string; deleter?: string }
 export async function deleteList(body: ListDeleteRequest): Promise<{}> {
-  return apiPost<ListDeleteRequest, {}>('/ListCreation/deleteList', body);
+  const payload: any = {
+    // backend expects listId; map from either field if provided
+    listId: body.listId ?? body.list
+  };
+  if (body.deleter) payload.deleter = body.deleter;
+  return apiPost<typeof payload, {}>('/ListCreation/deleteList', payload);
 }
 
 /* POST /ListCreation/addTask */

@@ -1,24 +1,30 @@
 # Planning Frontend
 
-Changes to the skeleton:
-- Make list format include the name of the tasks (and maybe description) and remove status aspect from tasks
+Random note:
+Backend = deno task concepts
+Frontend = npm run dev
 
-- Change the user authentication process
-Currently requires user to input their id with every new task, list, and session
-Would like to be able to "login" at the beginning and go from there
-
-- Make task bank visible on task screen
-Would need to happen after authentication has been added, but would like to see the set of tasks that the user already has
-
-- Need to completely rework the session start screen
-
-Done: 
-- Authentication
-- Task bank visible
-- Got deleteList working
-- Make lists only visible when you are the owner
+## Done: 
+- Added authentication
+- Fixed list display (include task name)
+- Added tasks by dropdown 
+- Made user's task bank visible
+- Made lists only visible when you are the owner
 
 
-Right now: 
-- Remove need to give username for delete (prob same process as for add)
+## To do: 
+### Today's focus:
+- Fix deleteList
+- Remove need to give username for delete task (prob same process as for add) 
 - Remove task statuses on lists
+### In coming days:
+- Fix adding dependencies (button doesn't do anything on the frontend)
+- Fix session interface
+    - Make selecting list a dropdown
+    - Make format and ordering type dropdowns
+    - Remove checking of user ID
+    - Get rid of "randomize order" button (redundant with ordering type selection)
+- Rearrange structure
+    - Swap [Lists, Task Bank, Sessions] with "Signed in as.."
+    - Make page dedicated to editing a particular list
+- Make pretty

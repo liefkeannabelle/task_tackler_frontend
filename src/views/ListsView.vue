@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useListsStore } from '../stores/lists';
 import { useTaskBankStore } from '../stores/taskbank';
 import { useAuthStore } from '../stores/auth';
@@ -23,24 +23,27 @@ const taskBank = useTaskBankStore();
 const auth = useAuthStore();
 
 // top-level log runs when the module loads
-console.debug('[ListsView] module loaded, auth snapshot:', {
-  username: auth?.username,
-  id: (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId,
-  full: auth
-});
-
+// ...existing code...
+async function loadAll() {
+  const ownerId = (auth as any)?._id ?? (auth as any)?.id ?? auth.username;
+  console.debug('[ListsView] loadAll ownerId:', ownerId);
+  await Promise.all([
+    store.fetchAll(ownerId || undefined),
+    taskBank.fetchAll(auth.username || undefined)
+  ]);
+}
 onMounted(async () => {
   try {
-    console.debug('auth store snapshot:', {
-      username: auth.username,
-      id: (auth as any)._id ?? (auth as any).id ?? (auth as any).userId,
-      full: auth})
-    await Promise.all([
-      store.fetchAll(auth.username || undefined), // pass owner so backend filters
-      taskBank.fetchAll(auth.username || undefined)
-    ]);
+    await loadAll();
   } catch (e) {
     console.error('initial data load failed', e);
+  }
+});
+watch(() => auth.username, async () => {
+  try {
+    await loadAll();
+  } catch (e) {
+    console.error('reload on auth change failed', e);
   }
 });
 
