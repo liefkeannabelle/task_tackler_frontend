@@ -3,7 +3,6 @@
     <div class="info">
       <span class="order">{{ item.orderNumber }}</span>
       <span class="task">{{ displayName }}</span>
-      <small class="status">({{ item.taskStatus ?? '-' }})</small>
     </div>
     <div class="actions">
       <button @click="move(-1)">▲</button>

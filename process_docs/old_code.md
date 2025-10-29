@@ -146,3 +146,26 @@ async function onDeleteTask({ listId, taskId, deleter }: any) {
 </script>
 ```
 
+ListView.vue
+```
+console.debug('[ListsView] module loaded, auth snapshot:', {
+  username: auth?.username,
+  id: (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId,
+  full: auth
+});
+
+onMounted(async () => {
+  try {
+    console.debug('auth store snapshot:', {
+      username: auth.username,
+      id: (auth as any)._id ?? (auth as any).id ?? (auth as any).userId,
+      full: auth})
+    await Promise.all([
+      store.fetchAll(auth.username || undefined), // pass owner so backend filters
+      taskBank.fetchAll(auth.username || undefined)
+    ]);
+  } catch (e) {
+    console.error('initial data load failed', e);
+  }
+});
+```

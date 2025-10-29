@@ -1,4 +1,3 @@
-// ...existing code...
 <template>
   <div>
     <h1>Task Bank</h1>
@@ -21,18 +20,27 @@
         :key="(t as any)._id || (t as any).taskName"
         :task="t"
         @delete="onDelete"
-        @edit-deps="() => onEditDeps(t)"
+        @edit-deps="onEditDeps"
       />
     </div>
+
+    <!-- deps editor modal -->
+    <TaskDepsEditor
+      v-if="showDeps"
+      :task="activeTask"
+      @close="closeDepsEditor"
+      @save="onDepsSaved"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed } from 'vue';
+import { onMounted, watch, computed, ref } from 'vue';
 import { useTaskBankStore } from '../stores/taskbank';
 import { useAuthStore } from '../stores/auth';
 import TaskRow from '../components/taskbank/TaskRow.vue';
 import AddTaskForm from '../components/taskbank/AddTaskForm.vue';
+import TaskDepsEditor from '../components/taskbank/TaskDepsEditor.vue';
 
 const taskBank = useTaskBankStore();
 const auth = useAuthStore();
@@ -40,11 +48,13 @@ const auth = useAuthStore();
 // expose a safe computed tasks array so template never sees undefined
 const tasks = computed(() => (taskBank && Array.isArray(taskBank.tasks) ? taskBank.tasks : []));
 
+const showDeps = ref(false);
+const activeTask = ref<Record<string, any> | null>(null);
+
 async function load() {
   try {
     await taskBank.fetchAll(auth.username || undefined);
   } catch (e) {
-    // fetch errors are surfaced on taskBank.error; keep console info for debugging
     console.error('taskBank.fetchAll failed', e);
   }
 }
@@ -75,7 +85,33 @@ async function onDelete(payload: { deleter: string; task: string }) {
 }
 
 function onEditDeps(task: any) {
-  console.log('edit deps for', task);
+  openDepsEditor(task);
+}
+
+function openDepsEditor(task: Record<string, any>) {
+  console.debug('open deps editor for', task);
+  activeTask.value = task;
+  showDeps.value = true;
+}
+
+function closeDepsEditor() {
+  showDeps.value = false;
+  activeTask.value = null;
+}
+
+async function onDepsSaved(payload: { taskId: string; dependencies: { depTask: string; depRelation: string }[] }) {
+  try {
+    if (typeof (taskBank as any).updateDeps === 'function') {
+      await (taskBank as any).updateDeps(payload.taskId, payload.dependencies);
+    } else {
+      console.warn('taskBank.updateDeps not available; dependencies not persisted.');
+    }
+    await load(); // refresh tasks to reflect changes
+  } catch (e) {
+    console.error('save deps failed', e);
+  } finally {
+    closeDepsEditor();
+  }
 }
 </script>
 
@@ -85,4 +121,3 @@ function onEditDeps(task: any) {
 .empty { color:#666; font-style:italic; }
 .error { color:var(--danger, #c00); }
 </style>
-// ...existing code...

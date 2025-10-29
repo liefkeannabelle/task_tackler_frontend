@@ -165,17 +165,29 @@ export async function deleteTaskFromBank(body: TaskBankDeleteTaskRequest): Promi
   return apiPost<TaskBankDeleteTaskRequest, {}>('/TaskBank/deleteTask', body);
 }
 
-/* POST /TaskBank/addDependency */
-export interface TaskBankAddDependencyRequest { adder: string; task1: string; task2: string; dependency: string }
-export interface TaskBankAddDependencyResponse { dependency: Dependency }
-export async function addDependency(body: TaskBankAddDependencyRequest): Promise<TaskBankAddDependencyResponse> {
-  return apiPost<TaskBankAddDependencyRequest, TaskBankAddDependencyResponse>('/TaskBank/addDependency', body);
+// /* POST /TaskBank/addDependency */
+// export interface TaskBankAddDependencyRequest { adder: string; task1: string; task2: string; dependency: string }
+// export interface TaskBankAddDependencyResponse { dependency: Dependency }
+// export async function addDependency(body: TaskBankAddDependencyRequest): Promise<TaskBankAddDependencyResponse> {
+//   return apiPost<TaskBankAddDependencyRequest, TaskBankAddDependencyResponse>('/TaskBank/addDependency', body);
+// }
+
+// /* POST /TaskBank/deleteDependency */
+// export interface TaskBankDeleteDependencyRequest { deleter: string; sourceTask: string; targetTask: string; relation: string }
+// export async function deleteDependency(body: TaskBankDeleteDependencyRequest): Promise<{}> {
+//   return apiPost<TaskBankDeleteDependencyRequest, {}>('/TaskBank/deleteDependency', body);
+// }
+
+// Add TaskBank dependency endpoints
+export interface AddDependencyRequest { adder: string; task1: string; task2: string; dependency: string }
+export interface DeleteDependencyRequest { deleter: string; sourceTask: string; targetTask: string; relation: string }
+
+export async function addDependency(body: AddDependencyRequest): Promise<any> {
+  return apiPost<AddDependencyRequest, any>('/TaskBank/addDependency', body);
 }
 
-/* POST /TaskBank/deleteDependency */
-export interface TaskBankDeleteDependencyRequest { deleter: string; sourceTask: string; targetTask: string; relation: string }
-export async function deleteDependency(body: TaskBankDeleteDependencyRequest): Promise<{}> {
-  return apiPost<TaskBankDeleteDependencyRequest, {}>('/TaskBank/deleteDependency', body);
+export async function deleteDependency(body: DeleteDependencyRequest): Promise<any> {
+  return apiPost<DeleteDependencyRequest, any>('/TaskBank/deleteDependency', body);
 }
 
 /* POST /TaskBank/_getDependencies */

@@ -5,7 +5,8 @@
       <small v-if="task.description"> — {{ task.description }}</small>
     </div>
     <div class="actions">
-      <button @click="$emit('edit-deps')">Deps</button>
+      <!-- emit the task as payload -->
+      <button @click="$emit('edit-deps', task)">Deps</button>
       <button @click="requestDelete">Delete</button>
     </div>
   </div>
@@ -13,10 +14,9 @@
 
 <script setup lang="ts">
 const props = defineProps<{ task: Record<string, any> }>();
-const emit = defineEmits<{ (e: 'delete', payload: { deleter: string; task: string }): void; (e: 'edit-deps'): void }>();
+const emit = defineEmits<{ (e: 'delete', payload: { deleter: string; task: string }): void; (e: 'edit-deps', task: Record<string, any>): void }>();
 
 function requestDelete() {
-  // caller should provide deleter id via UI; using prompt for simple skeleton
   const deleter = prompt('Your ID to delete this task:') || '';
   if (!deleter) return;
   emit('delete', { deleter, task: props.task._id || props.task.taskName || '' });

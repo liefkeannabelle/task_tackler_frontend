@@ -9,7 +9,9 @@ import {
   deleteDependency,
   getDependencies,
   evaluateTaskOrder,
-  getTasks
+  getTasks, 
+  addDependency as apiAddDependency,
+  deleteDependency as apiDeleteDependency,
 } from '../api/client';
 import { useAuthStore } from './auth';
 
@@ -89,8 +91,63 @@ export const useTaskBankStore = defineStore('taskbank', {
         this.loading = false;
       }
     },
+// ...existing code...
+    async updateDeps(taskId: string, newDeps: { depTask: string; depRelation: string }[]) {
+      this.loading = true;
+      try {
+        const authStore = useAuthStore();
+        const adder = authStore.username ?? (authStore as any)._id;
+        if (!adder) throw new Error('Not authenticated');
 
-    // ...existing addDependency, deleteDependency, loadDependencies, evaluateOrder unchanged but can accept optional adder/deleter using auth similarly...
+        // find current task in local cache
+        const currentTask = (this.tasks || []).find((t: any) => t._id === taskId);
+
+        // safely build a currentDeps array (avoid accessing possibly undefined properties)
+        let currentDeps: { depTask: string; depRelation: string }[] = [];
+        if (currentTask && Array.isArray((currentTask as any).dependencies)) {
+          currentDeps = (currentTask as any).dependencies.map((d: any) => ({
+            depTask: d.depTask,
+            depRelation: d.depRelation
+          }));
+        }
+
+        // compute adds/removes by comparing arrays
+        const toAdd = newDeps.filter(nd => !currentDeps.some(cd => cd.depTask === nd.depTask && cd.depRelation === nd.depRelation));
+        const toRemove = currentDeps.filter(cd => !newDeps.some(nd => nd.depTask === cd.depTask && nd.depRelation === cd.depRelation));
+
+        // perform deletions first
+        for (const rem of toRemove) {
+          await apiDeleteDependency({
+            deleter: adder,
+            sourceTask: taskId,
+            targetTask: rem.depTask,
+            relation: rem.depRelation
+          });
+        }
+
+        // perform additions
+        for (const add of toAdd) {
+          await apiAddDependency({
+            adder,
+            task1: taskId,
+            task2: add.depTask,
+            dependency: add.depRelation
+          });
+        }
+
+        // update local cache if present (safe check of index)
+        const idx = (this.tasks || []).findIndex((t: any) => t._id === taskId);
+        if (idx !== -1 && this.tasks[idx]) {
+          (this.tasks[idx] as any).dependencies = newDeps.map(d => ({ depTask: d.depTask, depRelation: d.depRelation }));
+        }
+
+        return true;
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    }
   }
 });
-// ...existing code...
