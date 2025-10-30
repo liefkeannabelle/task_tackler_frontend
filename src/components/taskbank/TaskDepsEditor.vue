@@ -7,7 +7,7 @@
         <h4>Current dependencies</h4>
         <ul>
           <li v-for="d in deps" :key="d.depTask + '|' + d.depRelation">
-            {{ labelFor(d.depTask) }} — <strong>{{ d.depRelation }}</strong>
+            {{ labelFor(d.depTask) }} — <strong>{{ String(d.depRelation).toLowerCase().replace(/_/g, ' ') }}</strong>
             <button @click="removeDep(d)" title="Remove dependency">×</button>
           </li>
         </ul>
@@ -16,22 +16,29 @@
         <em>No dependencies</em>
       </div>
 
+      <!-- add-dep now shows headers with dropdowns placed underneath -->
       <div class="add-dep">
-        <label for="addDep">Add dependency</label>
-        <select id="addDep" v-model="newDep">
-          <option value="">-- select task --</option>
-          <option v-for="t in candidates" :key="t._id" :value="t._id">
-            {{ t.taskName || t.name }} ({{ t._id }})
-          </option>
-        </select>
+        <div class="add-dep-group">
+          <h5>Task</h5>
+          <select id="addDep" v-model="newDep">
+            <option value="">-- select task --</option>
+            <option v-for="t in candidates" :key="t._id" :value="t._id">
+              {{ t.taskName || t.name }}
+            </option>
+          </select>
+        </div>
 
-        <label for="relation">Relation</label>
-        <select id="relation" v-model="newRel">
-          <option value="">-- select relation --</option>
-          <option v-for="r in relations" :key="r" :value="r">{{ r }}</option>
-        </select>
+        <div class="add-dep-group">
+          <h5>Relation</h5>
+          <select id="relation" v-model="newRel">
+            <option value="">-- select relation --</option>
+            <option v-for="r in relations" :key="r" :value="r">{{ r.toLowerCase().replace(/_/g, ' ') }}</option>
+          </select>
+        </div>
 
-        <button @click="addDep" :disabled="!newDep || !newRel">Add</button>
+        <div class="add-dep-actions">
+          <button @click="addDep" :disabled="!newDep || !newRel">Add</button>
+        </div>
       </div>
 
       <div class="actions">
@@ -108,6 +115,12 @@ function onSave() {
 .current-deps ul { list-style:none; padding:0; }
 .current-deps li { display:flex; align-items:center; gap:.5rem; margin:.25rem 0; }
 .current-deps button { margin-left:auto; }
-.add-dep { margin-top:.75rem; display:flex; gap:.5rem; align-items:center; }
+
+/* new layout for dropdowns under headers */
+.add-dep { display:grid; grid-template-columns: 1fr 1fr auto; gap:0.75rem; align-items:end; margin-top:.75rem; }
+.add-dep-group h5 { margin:0 0 .25rem 0; font-size:0.9rem; font-weight:600; }
+.add-dep-group select { width:100%; padding:.35rem; }
+.add-dep-actions { display:flex; align-items:center; }
+
 .actions { margin-top:1rem; display:flex; gap:.5rem; justify-content:flex-end; }
 </style>

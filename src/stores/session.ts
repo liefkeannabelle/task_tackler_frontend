@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import type { SessionDocument, SessionListItem } from '../api/client';
 import {
-  changeSession,
+  changeSession as apiChangeSession,
   setSessionOrdering,
   setSessionFormat,
   randomizeSessionOrder,
@@ -186,19 +186,19 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async changeSession(payload: { list: string; sessionOwner: string }) {
-      this.loading = true;
-      this.error = '';
-      try {
-        await changeSession({ list: payload.list, sessionOwner: payload.sessionOwner });
-        await this.fetchSessions();
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
+    // async changeSession(payload: { list: string; sessionOwner: string }) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   try {
+    //     await changeSession({ list: payload.list, sessionOwner: payload.sessionOwner });
+    //     await this.fetchSessions();
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
 
     async startTask(payload: { session: string; task: string }) {
       this.loading = true;
@@ -346,6 +346,78 @@ export const useSessionStore = defineStore('session', {
         }
       } catch {
         // ignore individual status refresh errors
+      }
+    },
+
+    // async changeSession(payload: { list: string; sessionOwner: string; name?: string }) {
+    //   this.loading = true;
+    //   try {
+    //     await apiCreateSession(payload);
+    //     // refresh local sessions
+    //     await this.fetchSessions();
+    //     return true;
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // }
+    // async changeSession(payload: { list: string; sessionOwner: string; name?: string }) {
+    //   this.loading = true;
+    //   try {
+    //     await apiChangeSession(payload);
+    //     await this.fetchSessions();
+    //     return true;
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
+      // async changeSession(payload: { list: string; sessionOwner: string; ordering?: string; format?: string; name?: string }) {
+      //   this.loading = true;
+      //   try {
+      //     const res = await apiChangeSession(payload);
+      //     // if (res?.error) throw new Error(res.error);
+      //     if (res && 'error' in res && res.error) throw new Error(res.error);
+      //     // refresh sessions and active session for owner
+      //     await this.fetchSessions();
+      //     await this.fetchActiveForOwner(payload.sessionOwner);
+      //     return res;
+      //   } catch (e: any) {
+      //     this.error = e?.message ?? String(e);
+      //     throw e;
+      //   } finally {
+      //     this.loading = false;
+      //   }
+      // }
+    async changeSession(payload: { list: string; sessionOwner: string; ordering?: string; format?: string; name?: string }) {
+      this.loading = true;
+      try {
+        const res = await apiChangeSession(payload);
+        // safe narrowing before reading properties
+        if (res && typeof res === 'object' && 'error' in res && res.error) {
+          throw new Error(String((res as any).error));
+        }
+
+        if (res && typeof res === 'object' && 'session' in res && (res as any).session) {
+          // created; refresh active/session state
+          await this.fetchSessions();
+          await this.fetchActiveForOwner(payload.sessionOwner);
+          return res;
+        }
+
+        // fallback: refresh lists to pick up changes
+        await this.fetchSessions();
+        await this.fetchActiveForOwner(payload.sessionOwner);
+        return res;
+      } catch (e: any) {
+        this.error = e?.message ?? String(e);
+        throw e;
+      } finally {
+        this.loading = false;
       }
     }
   }

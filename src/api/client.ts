@@ -239,10 +239,142 @@ export interface SessionListItem {
   itemStatus?: string;
 }
 
-/* POST /Session/changeSession */
-export interface SessionChangeRequest { list: string; sessionOwner: string }
-export async function changeSession(body: SessionChangeRequest): Promise<{}> {
-  return apiPost<SessionChangeRequest, {}>('/Session/changeSession', body);
+// /* POST /Session/changeSession */
+// export interface SessionChangeRequest { list: string; sessionOwner: string }
+// export async function changeSession(body: SessionChangeRequest): Promise<{}> {
+//   return apiPost<SessionChangeRequest, {}>('/Session/changeSession', body);
+// }
+// export interface ChangeSessionRequest { list: string; sessionOwner: string; name?: string }
+// export async function changeSession(body: ChangeSessionRequest): Promise<any> {
+//   return apiPost<ChangeSessionRequest, any>('/Session/changeSession', body);
+// }
+export interface ChangeSessionRequest { list: string; sessionOwner: string; ordering?: string; format?: string; name?: string }
+// export async function changeSession(body: ChangeSessionRequest): Promise<{ session?: string } | { error?: string }> {
+//   // return apiPost<ChangeSessionRequest, any>('/Session/changeSession', body);
+//     console.debug('[api.changeSession] sending', body);
+//     const url = API_BASE + '/api/Session/changeSession';
+//     const resp = await fetch(url, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify(body),
+//     });
+
+//     const text = await resp.text();
+//     console.debug('[api.changeSession] status', resp.status, 'rawText:', text);
+
+//     let parsed: any = null;
+//     try { parsed = text ? JSON.parse(text) : null; }
+//     catch (err) { console.warn('[api.changeSession] JSON parse failed', err); parsed = text; }
+
+//     console.debug('[api.changeSession] parsedResponse', parsed);
+//     return parsed;
+// }
+// ...existing code...
+
+// export async function changeSession(body: ChangeSessionRequest): Promise<{ session?: string } | { error?: string }> {
+//   console.debug('[api.changeSession] sending', body);
+//   const url = API_BASE + '/api/Session/changeSession';
+//   const resp = await fetch(url, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify(body),
+//   });
+
+//   const text = await resp.text();
+//   console.debug('[api.changeSession] status', resp.status, 'rawText:', text);
+
+//   let parsed: any = null;
+//   try { parsed = text ? JSON.parse(text) : null; } catch (err) { console.warn('[api.changeSession] JSON parse failed', err); parsed = text; }
+
+//   // Normalize error responses into an object with .error
+//   if (!resp.ok) {
+//     const errMsg = (parsed && typeof parsed === 'object' && 'error' in parsed) ? parsed.error : (typeof parsed === 'string' ? parsed : resp.statusText);
+//     return { error: String(errMsg) };
+//   }
+
+//   // For OK responses, prefer parsed object, otherwise return a normalized object
+//   if (parsed && typeof parsed === 'object') return parsed;
+//   if (typeof parsed === 'string' && parsed.length) {
+//     // attempt fallback: server returned a raw string, wrap it
+//     return { error: parsed };
+//   }
+//   return { error: 'Empty response from server' };
+// }
+// ...existing code...
+// export async function changeSession(body: ChangeSessionRequest): Promise<{ session?: string } | { error?: string }> {
+//   console.debug('[api.changeSession] sending', body);
+//   const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000';
+//   const url = base.replace(/\/$/, '') + '/api/Session/changeSession';
+
+//   const resp = await fetch(url, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify(body),
+//     credentials: 'include'
+//   });
+
+//   // Log status + headers (so we can see Content-Type)
+//   console.debug('[api.changeSession] status', resp.status, 'statusText', resp.statusText);
+//   resp.headers.forEach((v, k) => console.debug('[api.changeSession] resp header', k, v));
+
+//   const raw = await resp.text();
+//   console.debug('[api.changeSession] raw response text:', raw);
+
+//   // try parse safely
+//   let parsed: any = null;
+//   try { parsed = raw ? JSON.parse(raw) : null; }
+//   catch (err) { console.warn('[api.changeSession] JSON parse failed', err); parsed = raw; }
+
+//   console.debug('[api.changeSession] parsedResponse', parsed);
+
+//   if (!resp.ok) {
+//     const errMsg = (parsed && typeof parsed === 'object' && 'error' in parsed) ? parsed.error : (typeof parsed === 'string' ? parsed : resp.statusText);
+//     return { error: String(errMsg) };
+//   }
+
+//   if (parsed && typeof parsed === 'object') return parsed;
+//   if (typeof parsed === 'string' && parsed.length) return { error: parsed };
+//   return { error: 'Empty response from server' };
+// }
+
+export async function changeSession(body: ChangeSessionRequest): Promise<{ session?: string } | { error?: string }> {
+  console.debug('[api.changeSession] sending', body);
+
+  // Use API_BASE as the API root (set VITE_API_BASE_URL to e.g. "http://localhost:8000/api")
+  // Fallback to a sensible default that already includes /api to avoid duplicating it.
+  const base = (API_BASE && API_BASE.length)
+    ? API_BASE.replace(/\/$/, '') // remove trailing slash if present
+    : 'http://localhost:8000/api';
+
+  // Append the concept path (no extra /api prefix)
+  const url = base + '/Session/changeSession';
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include'
+  });
+
+  // Log status + headers
+  console.debug('[api.changeSession] status', resp.status, 'statusText', resp.statusText);
+  resp.headers.forEach((v, k) => console.debug('[api.changeSession] resp header', k, v));
+
+  const raw = await resp.text();
+  console.debug('[api.changeSession] raw response text:', raw);
+
+  let parsed: any = null;
+  try { parsed = raw ? JSON.parse(raw) : null; } catch (err) { console.warn('[api.changeSession] JSON parse failed', err); parsed = raw; }
+  console.debug('[api.changeSession] parsedResponse', parsed);
+
+  if (!resp.ok) {
+    const errMsg = (parsed && typeof parsed === 'object' && 'error' in parsed) ? parsed.error : (typeof parsed === 'string' ? parsed : resp.statusText);
+    return { error: String(errMsg) };
+  }
+
+  if (parsed && typeof parsed === 'object') return parsed;
+  if (typeof parsed === 'string' && parsed.length) return { error: parsed };
+  return { error: 'Empty response from server' };
 }
 
 /* POST /Session/setOrdering */
@@ -334,4 +466,10 @@ export async function getSessionForOwner(body: SessionGetForOwnerRequest): Promi
 export interface SessionGetActiveForOwnerRequest { owner: string }
 export async function getActiveSessionForOwner(body: SessionGetActiveForOwnerRequest): Promise<SessionDocument[]> {
   return apiPost<SessionGetActiveForOwnerRequest, SessionDocument[]>('/Session/_getActiveSessionForOwner', body);
+}
+
+// ...existing code...
+export interface CreateSessionRequest { list: string; sessionOwner: string; name?: string }
+export async function createSession(body: CreateSessionRequest): Promise<any> {
+  return apiPost<CreateSessionRequest, any>('/Session/changeSession', body);
 }

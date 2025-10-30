@@ -11,6 +11,8 @@
       </select>
 
       <button @click="create">Create/Change</button>
+      <button @click="$emit('create-session')">Create Session</button>
+
     </div>
 
     <div class="row">

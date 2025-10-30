@@ -6,7 +6,7 @@
     </div>
     <div class="actions">
       <!-- emit the task as payload -->
-      <button @click="$emit('edit-deps', task)">Deps</button>
+      <button @click="$emit('edit-deps', task)">Dependencies</button>
       <button @click="requestDelete">Delete</button>
     </div>
   </div>

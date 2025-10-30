@@ -19,12 +19,12 @@ Frontend = npm run dev
 ## To do: 
 ### Today's focus:
 - Reword dependencies page to make more intuitive
-### In coming days:
 - Fix session interface
     - Make selecting list a dropdown
     - Make format and ordering type dropdowns
     - Remove checking of user ID
     - Get rid of "randomize order" button (redundant with ordering type selection)
+### In coming days:
 - Rearrange structure
     - Swap [Lists, Task Bank, Sessions] with "Signed in as.."
     - Make page dedicated to editing a particular list
