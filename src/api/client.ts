@@ -396,10 +396,32 @@ export async function randomizeSessionOrder(body: SessionRandomizeRequest): Prom
 }
 
 /* POST /Session/activateSession */
-export interface SessionActivateRequest { session: string; activator: string }
-export async function activateSession(body: SessionActivateRequest): Promise<{}> {
-  return apiPost<SessionActivateRequest, {}>('/Session/activateSession', body);
-}
+// export interface SessionActivateRequest { session: string; activator: string }
+// export async function activateSession(body: SessionActivateRequest): Promise<{}> {
+//   return apiPost<SessionActivateRequest, {}>('/Session/activateSession', body);
+// }
+export interface ActivateSessionRequest { sessionId: string; sessionOwner: string }
+
+// export async function activateSession(body: ActivateSessionRequest): Promise<{ ok?: boolean } | { error?: string }> {
+//   const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+//   const url = base + '/Session/activateSession';
+//   console.debug('[api.activateSession] POST', url, body);
+//   const resp = await fetch(url, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify(body),
+//     credentials: 'include'
+//   });
+
+//   const raw = await resp.text();
+//   let parsed: any = null;
+//   try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = raw; }
+//   if (!resp.ok) {
+//     const msg = (parsed && typeof parsed === 'object' && 'error' in parsed) ? parsed.error : String(parsed ?? resp.statusText);
+//     return { error: msg };
+//   }
+//   return (parsed && typeof parsed === 'object') ? parsed : { ok: true };
+// }
 
 /* POST /Session/startTask */
 export interface SessionStartTaskRequest { session: string; task: string }
@@ -450,23 +472,110 @@ export async function getTaskStatus(body: SessionGetTaskStatusRequest): Promise<
   return apiPost<SessionGetTaskStatusRequest, SessionGetTaskStatusResponse[]>('/Session/_getTaskStatus', body);
 }
 
-/* POST /Session/_getSessionListItems */
-export interface SessionGetListItemsRequest { session: string }
-export async function getSessionListItems(body: SessionGetListItemsRequest): Promise<SessionListItem[]> {
-  return apiPost<SessionGetListItemsRequest, SessionListItem[]>('/Session/_getSessionListItems', body);
-}
+// /* POST /Session/_getSessionListItems */
+// export interface SessionGetListItemsRequest { session: string }
+// export async function getSessionListItems(body: SessionGetListItemsRequest): Promise<SessionListItem[]> {
+//   return apiPost<SessionGetListItemsRequest, SessionListItem[]>('/Session/_getSessionListItems', body);
+// }
 
-/* POST /Session/_getSessionForOwner */
-export interface SessionGetForOwnerRequest { owner: string }
-export async function getSessionForOwner(body: SessionGetForOwnerRequest): Promise<SessionDocument[]> {
-  return apiPost<SessionGetForOwnerRequest, SessionDocument[]>('/Session/_getSessionForOwner', body);
+// /* POST /Session/_getSessionForOwner */
+// export interface SessionGetForOwnerRequest { owner: string }
+// export async function getSessionForOwner(body: SessionGetForOwnerRequest): Promise<SessionDocument[]> {
+//   return apiPost<SessionGetForOwnerRequest, SessionDocument[]>('/Session/_getSessionForOwner', body);
+// }
+
+export async function getSessionByOwner(ownerId: string): Promise<any> {
+  const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+  const url = base + '/Session/getSessionByOwner';
+  console.debug('[api.getSessionByOwner] POST', url, { ownerId });
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner: ownerId }),
+    credentials: 'include'
+  });
+
+  console.debug('[api.getSessionByOwner] status', resp.status, resp.statusText);
+  resp.headers.forEach((v, k) => console.debug('[api.getSessionByOwner] resp header', k, v));
+
+  const raw = await resp.text();
+  console.debug('[api.getSessionByOwner] raw response text:', raw);
+
+  let parsed: any = null;
+  try { parsed = raw ? JSON.parse(raw) : null; } catch (err) { console.warn('[api.getSessionByOwner] JSON parse failed', err); parsed = raw; }
+  console.debug('[api.getSessionByOwner] parsedResponse', parsed);
+
+  if (!resp.ok) {
+    const errMsg = (parsed && typeof parsed === 'object' && 'error' in parsed) ? parsed.error : (typeof parsed === 'string' ? parsed : resp.statusText);
+    return { error: String(errMsg) };
+  }
+
+  return parsed && typeof parsed === 'object' ? parsed : { session: parsed };
 }
 
 /* POST /Session/_getActiveSessionForOwner */
-export interface SessionGetActiveForOwnerRequest { owner: string }
-export async function getActiveSessionForOwner(body: SessionGetActiveForOwnerRequest): Promise<SessionDocument[]> {
-  return apiPost<SessionGetActiveForOwnerRequest, SessionDocument[]>('/Session/_getActiveSessionForOwner', body);
+// export interface SessionGetActiveForOwnerRequest { owner: string }
+// export async function getActiveSessionForOwner(body: SessionGetActiveForOwnerRequest): Promise<SessionDocument[]> {
+//   return apiPost<SessionGetActiveForOwnerRequest, SessionDocument[]>('/Session/_getActiveSessionForOwner', body);
+// }
+// ...existing code...
+export async function getActiveSessionForOwner(ownerId: string): Promise<any> {
+  const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+  const url = base + '/Session/_getActiveSessionForOwner';
+  console.debug('[api.getActiveSessionForOwner] POST', url, { owner: ownerId });
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner: ownerId }),
+    credentials: 'include'
+  });
+  const raw = await resp.text();
+  try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
 }
+
+export async function getSessionForOwner(ownerId: string): Promise<any> {
+  const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+  const url = base + '/Session/_getSessionForOwner';
+  console.debug('[api.getSessionForOwner] POST', url, { owner: ownerId });
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner: ownerId }),
+    credentials: 'include'
+  });
+  const raw = await resp.text();
+  try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
+}
+
+export async function getSessionListItems(sessionId: string): Promise<any> {
+  const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+  const url = base + '/Session/_getSessionListItems';
+  console.debug('[api.getSessionListItems] POST', url, { session: sessionId });
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session: sessionId }),
+    credentials: 'include'
+  });
+  const raw = await resp.text();
+  try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
+}
+
+export async function activateSession(body: { session: string; activator: string }): Promise<any> {
+  const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+  const url = base + '/Session/activateSession';
+  console.debug('[api.activateSession] POST', url, body);
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include'
+  });
+  const raw = await resp.text();
+  try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
+}
+// ...existing code...
 
 // ...existing code...
 export interface CreateSessionRequest { list: string; sessionOwner: string; name?: string }

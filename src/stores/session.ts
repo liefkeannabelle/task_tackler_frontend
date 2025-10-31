@@ -6,7 +6,7 @@ import {
   setSessionOrdering,
   setSessionFormat,
   randomizeSessionOrder,
-  activateSession,
+  activateSession as apiActivateSession,
   startSessionTask,
   completeSessionTask,
   endSession,
@@ -17,9 +17,26 @@ import {
   getTaskStatus,
   getSessionListItems,
   getSessionForOwner,
-  getActiveSessionForOwner
+  getActiveSessionForOwner,
+  getSessionByOwner as apiGetSessionByOwner
 } from '../api/client';
 import { useAuthStore } from './auth';
+
+function normalizeSessionObj(raw: any) {
+  if (!raw) return null;
+      // backend returns a session doc directly; ensure _id and owner exist
+    return {
+      _id: raw._id ?? raw.session ?? raw.id,
+      owner: raw.owner,
+      listId: raw.listId ?? raw.list,
+      title: raw.title ?? '',
+      itemCount: raw.itemCount ?? raw.items ?? 0,        active: !!raw.active,
+      ordering: raw.ordering ?? raw.order,
+      format: raw.format ?? 'List',
+      // keep original raw for anything else
+       __raw: raw
+    };
+  }
 
 export const useSessionStore = defineStore('session', {
   state: () => ({
@@ -50,22 +67,66 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async activateSession(payload: { session: string; activator?: string }) {
-      this.loading = true;
-      this.error = '';
-      const auth = useAuthStore();
-      try {
-        const actor = payload.activator ?? auth.username;
-        if (!actor) throw new Error('Activator required (login or provide activator).');
-        await activateSession({ session: payload.session, activator: actor });
-        await this.fetchActiveForOwner();
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
-      }
-    },
+    // async activateSession(payload: { session: string; activator?: string }) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   const auth = useAuthStore();
+    //   try {
+    //     const actor = payload.activator ?? auth.username;
+    //     if (!actor) throw new Error('Activator required (login or provide activator).');
+    //     await activateSession({ session: payload.session, activator: actor });
+    //     await this.fetchActiveForOwner();
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
+    // ...existing code...
+// ...existing code...
+  // ...existing actions...
+
+  // async activateSession(payload: { sessionId: string; sessionOwner: string }) {
+  //   this.loading = true;
+  //   try {
+  //     const res = await apiActivateSession(payload);
+  //     if (res && typeof res === 'object' && 'error' in res && res.error) {
+  //       throw new Error(String(res.error));
+  //     }
+
+  //     // refresh sessions and active session from server
+  //     await this.fetchSessions();
+  //     await this.fetchActiveForOwner(payload.sessionOwner);
+
+  //     // set activeSession if it's present in sessions
+  //     const created = this.sessions.find(s => (s._id ?? s.session) === payload.sessionId);
+  //     if (created) this.activeSession = created as SessionDocument;
+
+  //     return res;
+  //   } catch (e: any) {
+  //     this.error = e?.message ?? String(e);
+  //     throw e;
+  //   } finally {
+  //     this.loading = false;
+  //   }
+  // },
+  async activateSession(payload: { sessionId: string; sessionOwner: string }) {
+    this.loading = true;
+    try {
+      const res = await apiActivateSession({ session: payload.sessionId, activator: payload.sessionOwner });
+      if (res && (res.error)) throw new Error(res.error);
+      // refresh
+      await this.fetchSessions();
+      await this.fetchActiveForOwner(payload.sessionOwner);
+      return res;
+    } catch (e:any) {
+      this.error = e?.message ?? String(e);
+      throw e;
+    } finally {
+      this.loading = false;
+    }
+  },
 
     async setOrdering(payload: { session: string; newType: string; setter?: string }) {
       this.loading = true;
@@ -122,25 +183,88 @@ export const useSessionStore = defineStore('session', {
       await this.fetchActiveForOwner(owner ?? auth.username);
     },
 
+    // async fetchSessions() {
+    //     this.loading = true;
+    //     this.error = '';
+    //     try {
+    //         const docs = await getSession({ session: '' } as any).catch(() => []);
+    //         this.sessions = Array.isArray(docs) ? docs : [];
+    //     } catch (e: any) {
+    //         this.error = e?.message ?? String(e);
+    //     } finally {
+    //         this.loading = false;
+    //     }
+    //   },
+    // async fetchSessions() {
+    //   this.loading = true;
+    //   try {
+    //     // if you have an endpoint to list all sessions, call it here; otherwise rely on other queries
+    //     const res = await apiGetAllSessions?.() ?? [];
+    //     console.debug('[session.store] fetchSessions raw:', res);
+    //     this.sessions = Array.isArray(res) ? res.map(normalizeSessionObj) : [];
+    //   } catch (e) {
+    //     console.error('[session.store] fetchSessions failed', e);
+    //     this.sessions = [];
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
     async fetchSessions() {
-        this.loading = true;
-        this.error = '';
-        try {
-            const docs = await getSession({ session: '' } as any).catch(() => []);
-            this.sessions = Array.isArray(docs) ? docs : [];
-        } catch (e: any) {
-            this.error = e?.message ?? String(e);
-        } finally {
-            this.loading = false;
+      this.loading = true;
+      try {
+        // prefer fetching sessions for the current user if possible
+        const auth = useAuthStore();
+        const owner = auth.username ?? (auth as any)?._id;
+        let res: any = [];
+        if (owner) {
+          res = await getSessionForOwner(owner).catch(() => []);
         }
-        },
+        // normalize into array of session objects
+        if (Array.isArray(res)) {
+          this.sessions = res.map(normalizeSessionObj).filter(Boolean) as SessionDocument[];
+        } else if (res) {
+          const one = normalizeSessionObj(res);
+          this.sessions = one ? [one] : [];
+        } else {
+          this.sessions = [];
+        }
+        console.debug('[session.store] fetchSessions -> sessions', this.sessions);
+      } catch (e) {
+        console.error('[session.store] fetchSessions failed', e);
+        this.sessions = [];
+      } finally {
+        this.loading = false;
+      }
+    },
 
+    // async fetchByOwner(owner: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   try {
+    //     const docs = await getSessionForOwner({ owner });
+    //     this.sessions = Array.isArray(docs) ? docs : [];
+    //     return this.sessions;
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
     async fetchByOwner(owner: string) {
       this.loading = true;
       this.error = '';
       try {
-        const docs = await getSessionForOwner({ owner });
-        this.sessions = Array.isArray(docs) ? docs : [];
+        // getSessionForOwner expects owner string (not an object)
+        const docs = await getSessionForOwner(owner);
+        if (Array.isArray(docs)) {
+          this.sessions = docs.map(normalizeSessionObj).filter(Boolean) as SessionDocument[];
+        } else if (docs) {
+          const one = normalizeSessionObj(docs);
+          this.sessions = one ? [one] : [];
+        } else {
+          this.sessions = [];
+        }
         return this.sessions;
       } catch (e: any) {
         this.error = e?.message ?? String(e);
@@ -150,20 +274,109 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
-    async fetchActiveForOwner(owner?: string) {
+    // async fetchActiveForOwner(owner?: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   try {
+    //     const docs = await getActiveSessionForOwner({ owner: owner ?? '' });
+    //     if (Array.isArray(docs) && docs.length > 0) {
+    //       this.activeSession = docs[0] ?? null;
+    //     } else {
+    //       this.activeSession = null;
+    //     }
+    //     return this.activeSession;
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
+    // ...existing code...
+
+  // async fetchActiveForOwner(ownerId?: string) {
+  //   this.loading = true;
+  //   try {
+  //     const owner = ownerId ?? (/* auth lookup if you have it here */ undefined);
+  //     if (!owner) {
+  //       this.activeSession = null;
+  //       return null;
+  //     }
+
+  //     const res = await apiGetSessionByOwner(owner);
+  //     console.debug('[session.store] fetchActiveForOwner raw result:', res);
+
+  //     // normalize: backend may return { session: {...} } or the session object directly
+  //     let sessionObj: any = null;
+  //     if (!res) {
+  //       sessionObj = null;
+  //     } else if (typeof res === 'object' && 'session' in res) {
+  //       sessionObj = res.session;
+  //     } else if (Array.isArray(res) && res.length) {
+  //       // if backend returns an array, pick first or the active one
+  //       sessionObj = res.find((s: any) => s.active) ?? res[0];
+  //     } else if (typeof res === 'object') {
+  //       sessionObj = res;
+  //     } else {
+  //       sessionObj = null;
+  //     }
+
+  //     this.activeSession = sessionObj ?? null;
+  //     return this.activeSession;
+  //   } catch (e: any) {
+  //     console.error('[session.store] fetchActiveForOwner failed', e);
+  //     this.activeSession = null;
+  //     return null;
+  //   } finally {
+  //     this.loading = false;
+  //   }
+  // },
+    // async fetchActiveForOwner(ownerId?: string) {
+    //   this.loading = true;
+    //   try {
+    //     const owner = ownerId ?? /* fallback to auth username if available */ undefined;
+    //     if (!owner) { this.activeSession = null; return null; }
+    //     // prefer the explicit active query
+    //     const raw = await getActiveSessionForOwner(owner);
+    //     if (!raw) {
+    //       // fall back to any session for owner
+    //       const alt = await getSessionForOwner(owner);
+    //       this.activeSession = normalizeSessionObj(alt);
+    //     } else {
+    //       this.activeSession = normalizeSessionObj(raw);
+    //     }
+    //     return this.activeSession;
+    //   } catch (e) {
+    //     console.error('[session.store] fetchActiveForOwner failed', e);
+    //     this.activeSession = null;
+    //     return null;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
+    async fetchActiveForOwner(ownerId?: string) {
       this.loading = true;
-      this.error = '';
       try {
-        const docs = await getActiveSessionForOwner({ owner: owner ?? '' });
-        if (Array.isArray(docs) && docs.length > 0) {
-          this.activeSession = docs[0] ?? null;
-        } else {
-          this.activeSession = null;
+        const owner = ownerId ?? (useAuthStore().username ?? (useAuthStore() as any)?._id);
+        if (!owner) { this.activeSession = null; return null; }
+
+        // try explicit active endpoint first
+        const rawActive = await getActiveSessionForOwner(owner).catch(() => null);
+        if (rawActive) {
+          // endpoint may return an object or an array
+          let sessionObj = Array.isArray(rawActive) ? rawActive.find((s: any) => s.active) ?? rawActive[0] : rawActive;
+          this.activeSession = normalizeSessionObj(sessionObj);
+          return this.activeSession;
         }
+                const alt = await getSessionForOwner(owner).catch(() => null);
+        if (!alt) { this.activeSession = null; return null; }
+        let picked = Array.isArray(alt) ? alt.find((s: any) => s.active) ?? alt[0] : alt;
+        this.activeSession = normalizeSessionObj(picked);
         return this.activeSession;
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
+      } catch (e) {
+        console.error('[session.store] fetchActiveForOwner failed', e);
+        this.activeSession = null;
+        return null;
       } finally {
         this.loading = false;
       }
@@ -287,53 +500,62 @@ export const useSessionStore = defineStore('session', {
       }
     },
 
+    // async loadSessionListItems(sessionId: string) {
+    //   this.loading = true;
+    //   this.error = '';
+    //   try {
+    //     if (!sessionId) {
+    //       this.listItems = [];
+    //       return this.listItems;
+    //     }
+    //     const items = await getSessionListItems({ session: sessionId }).catch(() => []);
+    //     this.listItems = Array.isArray(items) ? items : [];
+    //     // load statuses for each task (concurrently but guarded)
+    //     const tasksToCheck = this.listItems
+    //       .map(it => {
+    //         // const taskId = it && (it.task ?? it.taskId ?? it._id);
+    //         // return typeof taskId === 'string' && taskId ? taskId : undefined;
+    //         const maybeTask = (it as any).task ?? it.taskId ?? it._id;
+    //         return typeof maybeTask === 'string' && maybeTask ? maybeTask : undefined;
+    //       })
+    //       .filter((t): t is string => !!t);
+
+    //     // fetch statuses in parallel but limit errors from failing the whole batch
+    //     const statusPromises = tasksToCheck.map(taskId =>
+    //       getTaskStatus({ session: sessionId, task: taskId })
+    //         .then(res => ({ taskId, res }))
+    //         .catch(() => ({ taskId, res: [] as any[] }))
+    //     );
+
+    //     const results = await Promise.all(statusPromises);
+    //     for (const { taskId, res } of results) {
+    //       if (Array.isArray(res) && res.length > 0 && res[0] && typeof (res[0] as any).status === 'string') {
+    //         this.taskStatuses[taskId] = (res[0] as any).status;
+    //       } else {
+    //         // fallback to existing item status if available
+    //         // const item = this.listItems.find(it => (it.task ?? it.taskId ?? it._id) === taskId);
+    //         // const fallback = item && (item.itemStatus ?? (item as any).taskStatus);
+    //         const item = this.listItems.find(it => ((it as any).task ?? it.taskId ?? it._id) === taskId);
+    //         const fallback = item && (item.itemStatus ?? (item as any).taskStatus ?? (item as any).task);
+    //         if (typeof fallback === 'string') this.taskStatuses[taskId] = fallback;
+    //       }
+    //     }
+
+    //     return this.listItems;
+    //   } catch (e: any) {
+    //     this.error = e?.message ?? String(e);
+    //     throw e;
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
     async loadSessionListItems(sessionId: string) {
-      this.loading = true;
-      this.error = '';
       try {
-        if (!sessionId) {
-          this.listItems = [];
-          return this.listItems;
-        }
-        const items = await getSessionListItems({ session: sessionId }).catch(() => []);
+        const items = await getSessionListItems(sessionId);
         this.listItems = Array.isArray(items) ? items : [];
-        // load statuses for each task (concurrently but guarded)
-        const tasksToCheck = this.listItems
-          .map(it => {
-            // const taskId = it && (it.task ?? it.taskId ?? it._id);
-            // return typeof taskId === 'string' && taskId ? taskId : undefined;
-            const maybeTask = (it as any).task ?? it.taskId ?? it._id;
-            return typeof maybeTask === 'string' && maybeTask ? maybeTask : undefined;
-          })
-          .filter((t): t is string => !!t);
-
-        // fetch statuses in parallel but limit errors from failing the whole batch
-        const statusPromises = tasksToCheck.map(taskId =>
-          getTaskStatus({ session: sessionId, task: taskId })
-            .then(res => ({ taskId, res }))
-            .catch(() => ({ taskId, res: [] as any[] }))
-        );
-
-        const results = await Promise.all(statusPromises);
-        for (const { taskId, res } of results) {
-          if (Array.isArray(res) && res.length > 0 && res[0] && typeof (res[0] as any).status === 'string') {
-            this.taskStatuses[taskId] = (res[0] as any).status;
-          } else {
-            // fallback to existing item status if available
-            // const item = this.listItems.find(it => (it.task ?? it.taskId ?? it._id) === taskId);
-            // const fallback = item && (item.itemStatus ?? (item as any).taskStatus);
-            const item = this.listItems.find(it => ((it as any).task ?? it.taskId ?? it._id) === taskId);
-            const fallback = item && (item.itemStatus ?? (item as any).taskStatus ?? (item as any).task);
-            if (typeof fallback === 'string') this.taskStatuses[taskId] = fallback;
-          }
-        }
-
-        return this.listItems;
-      } catch (e: any) {
-        this.error = e?.message ?? String(e);
-        throw e;
-      } finally {
-        this.loading = false;
+      } catch (e) {
+        console.error('[session.store] loadSessionListItems failed', e);
+        this.listItems = [];
       }
     },
 
@@ -419,6 +641,6 @@ export const useSessionStore = defineStore('session', {
       } finally {
         this.loading = false;
       }
-    }
+    },
   }
 });
