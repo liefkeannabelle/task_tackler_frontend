@@ -423,6 +423,26 @@ export interface ActivateSessionRequest { sessionId: string; sessionOwner: strin
 //   return (parsed && typeof parsed === 'object') ? parsed : { ok: true };
 // }
 
+export async function deactivateSession(body: { sessionId: string; sessionOwner: string }): Promise<{ ok?: boolean } | { error?: string }> {
+  const base = (API_BASE && API_BASE.length) ? API_BASE.replace(/\/$/, '') : 'http://localhost:8000/api';
+  const url = base + '/Session/endSession';
+  console.debug('[api.deactivateSession] POST', url, body);
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session: body.sessionId, owner: body.sessionOwner }),
+    credentials: 'include'
+  });
+  const raw = await resp.text();
+  let parsed: any = null;
+  try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = raw; }
+  if (!resp.ok) {
+    const msg = (parsed && typeof parsed === 'object' && 'error' in parsed) ? parsed.error : (typeof parsed === 'string' ? parsed : resp.statusText);
+    return { error: String(msg) };
+  }
+  return parsed && typeof parsed === 'object' ? parsed : { ok: true };
+}
+
 /* POST /Session/startTask */
 export interface SessionStartTaskRequest { session: string; task: string }
 export async function startSessionTask(body: SessionStartTaskRequest): Promise<{}> {

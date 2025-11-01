@@ -1,11 +1,8 @@
 <template>
-  <div>
-    <h1>Task Bank</h1>
+  <div class="taskbank-view">
+    <h1 class="tasks-header">Task Bank</h1>
 
-    <div class="controls">
-      <span v-if="auth.isLoggedIn">Signed in as <strong>{{ auth.username }}</strong></span>
-      <button @click="refresh" :disabled="taskBank.loading">Refresh</button>
-    </div>
+
 
     <AddTaskForm @add="onAdd" />
 
@@ -116,8 +113,26 @@ async function onDepsSaved(payload: { taskId: string; dependencies: { depTask: s
 </script>
 
 <style scoped>
-.controls { display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; }
-.task-list { display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem; }
-.empty { color:#666; font-style:italic; }
-.error { color:var(--danger, #c00); }
+.taskbank-view {
+  background: transparent; /* page background handled by global */
+  padding: 1rem;
+}
+
+/* header panel */
+.tasks-header {
+  background: var(--surface);
+  color: var(--text);
+  padding: .6rem .85rem;
+  border-radius: 6px;
+  margin: 0 0 1rem 0;
+  font-size: 1.35rem;
+}
+
+/* task list container — group of panels */
+.task-list {
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+  margin-top:.75rem;
+}
 </style>

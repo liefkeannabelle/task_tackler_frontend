@@ -1,6 +1,7 @@
 <template>
-  <div>
-    <h1>Lists</h1>
+  <!-- root gets lists-view so we can style it with theme variables -->
+  <div class="lists-view">
+    <h1 class="lists-header">Lists</h1>
     <NewListForm @create="createList" />
     <div v-if="store.loading">Loading...</div>
     <div v-if="store.error" class="error">{{ store.error }}</div>
@@ -69,4 +70,14 @@ async function onAssignOrder(payload: { listId: string; taskId: string; newOrder
 
 <style scoped>
 .error { color: #c00; margin: .5rem 0; }
+
+.lists-header {
+  background: var(--surface);
+  color: var(--text);
+  padding: .6rem .85rem;
+  border-radius: 6px;
+  margin: 0 0 1rem 0;
+  font-size: 1.35rem;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
+}
 </style>

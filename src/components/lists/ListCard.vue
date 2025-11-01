@@ -177,15 +177,59 @@ async function confirmDelete() {
 }
 </script>
 
+// ...existing code...
 <style scoped>
-.list-card { border:1px solid #ddd; padding: .75rem; border-radius:6px; margin-bottom:.75rem; }
+/* use theme variables for panel background + text so each card is a surface panel */
+.list-card {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: .75rem;
+  border-radius: 6px;
+  margin-bottom: .75rem;
+}
+
+/* header stays readable on surface */
 .card-header { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
-.delete-list { margin-left:.5rem; color:#fff; background:#c33; border:none; padding:.25rem .5rem; border-radius:4px; cursor:pointer; }
+.card-header h3 { margin:0; }
+.card-header small { color: var(--muted); }
+
+/* make delete button stand out but fit theme */
+.delete-list {
+  margin-left:.5rem;
+  color: var(--text);
+  background: rgba(255,80,80,0.15);
+  border: 1px solid rgba(255,80,80,0.25);
+  padding:.25rem .5rem;
+  border-radius:4px;
+  cursor:pointer;
+}
+
+/* add-row and inputs */
 .add-row { display:flex; gap:.5rem; margin:.5rem 0; position:relative; align-items:center; }
-.add-row input { padding:.25rem .5rem; }
-.results { position:absolute; top:2.6rem; left:0; right:0; max-height:12rem; overflow:auto; background:white; border:1px solid #ccc; z-index:10; margin:0; padding:0; list-style:none; }
-.result-item { padding:.35rem .5rem; cursor:pointer; }
-.result-item:hover { background:#f0f0f0; }
-.selected { display:flex; gap:.5rem; align-items:center; }
-.empty { color:#666; font-style:italic; }
+.add-row input { padding:.25rem .5rem; background: transparent; color: var(--text); border:1px solid rgba(255,255,255,0.04); border-radius:4px; }
+
+/* results dropdown: keep it on top of surface but use a slightly elevated background */
+.results {
+  position:absolute;
+  top:2.6rem;
+  left:0;
+  right:0;
+  max-height:12rem;
+  overflow:auto;
+  background: var(--surface);
+  border:1px solid rgba(255,255,255,0.04);
+  z-index:10;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.result-item { padding:.35rem .5rem; cursor:pointer; color: var(--text); }
+.result-item:hover { background: rgba(255,255,255,0.02); }
+.selected { display:flex; gap:.5rem; align-items:center; color: var(--muted); }
+.empty { color: var(--muted); font-style:italic; }
+
+/* List items container */
+.items { display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem; }
 </style>
+// ...existing code...

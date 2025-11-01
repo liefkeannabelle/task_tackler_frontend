@@ -59,24 +59,50 @@ async function main() {
     } catch {
       // best-effort logging
     }
-    // Add CORS headers that match the allowed origin used in the project
-    c.header("Access-Control-Allow-Origin", "http://localhost:5173");
-    c.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    c.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type,Authorization,X-Auth-UserId,X-Auth-Username",
-    );
-    // If credentials are required set this to 'true' and ensure the frontend
-    // sends credentials: 'include'
-    // c.header('Access-Control-Allow-Credentials', 'true');
-    await next();
-    return;
+    // Add CORS headers that match the allowed origin used in the project.
+    // We set them before calling `next()` and again after to be defensive so
+    // even error or early-return responses include the headers.
+    const setCorsHeaders = () => {
+      c.header("Access-Control-Allow-Origin", "http://localhost:5173");
+      c.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+      c.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type,Authorization,X-Auth-UserId,X-Auth-Username",
+      );
+      // When the frontend sends credentials: 'include' the server must return
+      // Access-Control-Allow-Credentials: true (string value "true").
+      c.header("Access-Control-Allow-Credentials", "true");
+    };
+
+    setCorsHeaders();
+    try {
+      await next();
+    } catch (err) {
+      // Ensure CORS headers are present on error responses too.
+      setCorsHeaders();
+      throw err;
+    } finally {
+      // Also set headers after the handler runs to cover cases where a handler
+      // returned a Response directly without using c.json/c.text.
+      setCorsHeaders();
+    }
   });
 
   // Respond to preflight requests immediately with no body and a 204.
   app.options("*", (c) => {
-    // Return an empty 204 response for preflight
-    return new Response(null, { status: 204 });
+    // Return an empty 204 response for preflight and include explicit CORS headers.
+    // Return a Response that explicitly includes the CORS headers. Using a
+    // raw Response ensures the headers are present even if middleware ordering
+    // varies in practice (defensive setup).
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "http://localhost:5173",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers":
+          "Content-Type,Authorization,X-Auth-UserId,X-Auth-Username",
+      },
+    });
   });
 
   // Create helpful indexes for sessions & listItems. If running against a
@@ -299,6 +325,17 @@ async function main() {
 
               // Log resolved caller so frontend/auth mismatch is obvious
               console.debug("[server] resolved caller:", callerId);
+
+              // If the client sent a sessionOwner value, warn if it doesn't match
+              // the authenticated caller and always prefer the authenticated id.
+              if (
+                body && body.sessionOwner &&
+                String(body.sessionOwner) !== String(callerId)
+              ) {
+                console.warn(
+                  `[server] Ignoring client-supplied sessionOwner=${body.sessionOwner}; using authenticated caller=${callerId}`,
+                );
+              }
 
               if (!callerId) {
                 return c.json({

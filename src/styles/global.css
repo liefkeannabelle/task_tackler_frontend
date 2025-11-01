@@ -1,0 +1,38 @@
+:root {
+  --bg: #02351c;        /* page background */
+  --text: #271e01;      /* primary text */
+  --surface: #edf0d9;   /* card/panel background */
+  --muted: #edf0d9;     /* secondary text */
+  --accent: #4f9cff;    /* buttons / links */
+}
+.region-muted { color: var(--muted); }
+
+/* dark theme vars example; toggle with .theme-light on <html> or <body> */
+.theme-light {
+  --bg: #ffffff;
+  --text: #111827;
+  --surface: #ffffff;
+  --muted: #6b7280;
+  --accent: #1f6feb;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* sensible defaults so components inherit colors */
+* { box-sizing: border-box; }
+a { color: var(--accent); }
+button { color: var(--text); background: transparent; border-color: rgba(255,255,255,0.06); }
+
+/* common UI surfaces */
+.session-view, .session-summary, .create-session-modal, .session-list, .session-list-item {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* muted text */
+.muted { color: var(--muted); }

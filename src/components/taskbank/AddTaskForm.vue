@@ -32,5 +32,16 @@ function submit() {
 <style scoped>
 .add-task-form { display:flex; gap:.5rem; align-items:center; }
 .add-task-form input { padding:.25rem .5rem; }
+
+/* make the Add Task button use the theme surface/text colors */
+.add-task-form button {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: .35rem .6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.add-task-form button:hover { filter: brightness(1.03); }
+.add-task-form button:disabled { opacity: .6; cursor: not-allowed; }
 </style>
-// ...existing code...

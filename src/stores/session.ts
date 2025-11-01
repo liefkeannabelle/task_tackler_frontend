@@ -7,6 +7,7 @@ import {
   setSessionFormat,
   randomizeSessionOrder,
   activateSession as apiActivateSession,
+  deactivateSession as apiDeactivateSession,
   startSessionTask,
   completeSessionTask,
   endSession,
@@ -18,9 +19,10 @@ import {
   getSessionListItems,
   getSessionForOwner,
   getActiveSessionForOwner,
-  getSessionByOwner as apiGetSessionByOwner
+  getSessionByOwner as apiGetSessionByOwner,
 } from '../api/client';
 import { useAuthStore } from './auth';
+import { useTaskBankStore } from './taskbank';
 
 function normalizeSessionObj(raw: any) {
   if (!raw) return null;
@@ -111,16 +113,82 @@ export const useSessionStore = defineStore('session', {
   //     this.loading = false;
   //   }
   // },
-  async activateSession(payload: { sessionId: string; sessionOwner: string }) {
+  // async activateSession(payload: { sessionId: string; sessionOwner: string }) {
+  //   this.loading = true;
+  //   try {
+  //     const res = await apiActivateSession({ session: payload.sessionId, activator: payload.sessionOwner });
+  //     if (res && (res.error)) throw new Error(res.error);
+  //     // refresh
+  //     await this.fetchSessions();
+  //     await this.fetchActiveForOwner(payload.sessionOwner);
+  //     return res;
+  //   } catch (e:any) {
+  //     this.error = e?.message ?? String(e);
+  //     throw e;
+  //   } finally {
+  //     this.loading = false;
+  //   }
+  // },
+  // ...existing code...
+  async activateSession(payload: { session: string; activator: string }) {
     this.loading = true;
     try {
-      const res = await apiActivateSession({ session: payload.sessionId, activator: payload.sessionOwner });
-      if (res && (res.error)) throw new Error(res.error);
-      // refresh
-      await this.fetchSessions();
-      await this.fetchActiveForOwner(payload.sessionOwner);
+      const res = await apiActivateSession(payload);
+      if (res && typeof res === 'object' && 'error' in res && res.error) {
+        throw new Error(String(res.error));
+      }
+
+      // Optimistically mark sessions in local state
+      this.sessions = this.sessions.map(s => {
+        const id = s._id ?? (s as any).session;
+        if (id === payload.session) return { ...s, active: true };
+        // optionally mark previous active as inactive
+        return { ...s, active: false };
+      });
+
+      // set activeSession locally (no reload required)
+      const found = this.sessions.find(s => (s._id ?? (s as any).session) === payload.session) ?? null;
+      this.activeSession = found as any;
+
+      // still refresh in background but UI already updated
+      this.fetchSessions().catch(() => {});
+      this.fetchActiveForOwner(payload.activator).catch(() => {});
+
       return res;
-    } catch (e:any) {
+    } catch (e: any) {
+      this.error = e?.message ?? String(e);
+      throw e;
+    } finally {
+      this.loading = false;
+    }
+  },
+
+  async deactivateSession(payload: { sessionId: string; sessionOwner: string }) {
+    this.loading = true;
+    try {
+      const res = await apiDeactivateSession(payload);
+      if (res && typeof res === 'object' && 'error' in res && res.error) {
+        throw new Error(String(res.error));
+      }
+
+      // optimistic local update: mark session inactive and clear activeSession if it matches
+      this.sessions = this.sessions.map(s => {
+        const id = (s as any)._id ?? (s as any).session;
+        if (id === payload.sessionId) return { ...s, active: false };
+        return s;
+      });
+
+      const activeId = (this.activeSession as any)?._id ?? (this.activeSession as any)?.session;
+      if (activeId === payload.sessionId) {
+        this.activeSession = null;
+      }
+
+      // refresh in background
+      this.fetchSessions().catch(() => {});
+      this.fetchActiveForOwner(payload.sessionOwner).catch(() => {});
+
+      return res;
+    } catch (e: any) {
       this.error = e?.message ?? String(e);
       throw e;
     } finally {
@@ -549,15 +617,15 @@ export const useSessionStore = defineStore('session', {
     //     this.loading = false;
     //   }
     // },
-    async loadSessionListItems(sessionId: string) {
-      try {
-        const items = await getSessionListItems(sessionId);
-        this.listItems = Array.isArray(items) ? items : [];
-      } catch (e) {
-        console.error('[session.store] loadSessionListItems failed', e);
-        this.listItems = [];
-      }
-    },
+    // async loadSessionListItems(sessionId: string) {
+    //   try {
+    //     const items = await getSessionListItems(sessionId);
+    //     this.listItems = Array.isArray(items) ? items : [];
+    //   } catch (e) {
+    //     console.error('[session.store] loadSessionListItems failed', e);
+    //     this.listItems = [];
+    //   }
+    // },
 
     async refreshTaskStatus(sessionId: string, taskId: string) {
       try {
@@ -642,5 +710,69 @@ export const useSessionStore = defineStore('session', {
         this.loading = false;
       }
     },
+  // async loadSessionListItems(sessionId: string) {
+  //   this.loading = true;
+  //   try {
+  //     // fetch raw list items from backend
+  //     const items = await getSessionListItems(sessionId);
+  //     if (!Array.isArray(items)) {
+  //       this.listItems = [];
+  //       return [];
+  //     }
+
+  //     // Ensure task bank is loaded so we can resolve names
+  //     const taskBank = useTaskBankStore();
+  //     try {
+  //       if (!taskBank.tasks || !taskBank.tasks.length) {
+  //         await taskBank.fetchAll();
+  //       }
+  //     } catch (err) {
+  //       console.debug('[session.store] taskBank.fetchAll failed (ignorable):', err);
+  //     }
+
+  //     // Build lookup by task _id and enrich items with taskName
+  //     const tasksById = new Map((taskBank.tasks || []).map((t: any) => [t._id, t]));
+  //     this.listItems = items.map((it: any) => {
+  //       const nameFromBank = tasksById.get(it.taskId)?.taskName ?? tasksById.get(it.taskId)?.name;
+  //       return {
+  //         ...it,
+  //         taskName: nameFromBank ?? it.taskName ?? it.taskId
+  //       };
+  //     });
+
+  //     console.debug('[session.store] loadSessionListItems enriched:', this.listItems);
+  //     return this.listItems;
+  //   } catch (e: any) {
+  //     console.error('[session.store] loadSessionListItems failed', e);
+  //     this.listItems = [];
+  //     throw e;
+  //   } finally {
+  //     this.loading = false;
+  //   }
+  // },
+    async loadSessionListItems(sessionId: string) {
+    this.loading = true;
+    try {
+      const items = await getSessionListItems(sessionId);
+      console.debug('[session.store] raw session list items', items);
+
+      if (!Array.isArray(items)) {
+        this.listItems = [];
+        return [];
+      }
+
+      // Trust backend-provided taskName (do not overwrite it here)
+      this.listItems = items.map((it: any) => ({ ...it }));
+      console.debug('[session.store] listItems set', this.listItems);
+      return this.listItems;
+    } catch (e: any) {
+      console.error('[session.store] loadSessionListItems failed', e);
+      this.listItems = [];
+      throw e;
+    } finally {
+      this.loading = false;
+    }
+  }
+
   }
 });

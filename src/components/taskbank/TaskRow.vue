@@ -24,6 +24,25 @@ function requestDelete() {
 </script>
 
 <style scoped>
-.task-row { display:flex; justify-content:space-between; align-items:center; padding:.5rem; border:1px solid #eee; border-radius:4px; }
-.actions button { margin-left:.5rem; }
+.task-row {
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:.5rem;
+border-radius:6px;
+background: var(--surface);
+color: var(--text);
+border: 1px solid rgba(255,255,255,0.04);
+}
+
+.actions button {
+margin-left:.5rem;
+background: transparent;
+color: var(--text);
+border: 1px solid rgba(255,255,255,0.04);
+padding: .25rem .5rem;
+border-radius:4px;
+cursor: pointer;
+}
+.actions button:hover { filter: brightness(1.03); }
 </style>
