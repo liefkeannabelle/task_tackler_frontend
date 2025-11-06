@@ -11,7 +11,7 @@ Frontend = npm run dev
 - Made user's task bank visible
 - Made lists only visible when you are the owner
 - Fixed deleteList
-- Removed username prompt box on deleteTask
+- Removed username prompt box on deleteTask <- still getting this prompt in TaskBank??
 - Removed task statuses on lists
 - Fixed dependencies on task bank page
 - Enforce dependencies when making list ordering
