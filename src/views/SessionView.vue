@@ -49,6 +49,8 @@
       @complete-task="store.completeTask"
       @add-item="store.addListItem"
       @remove-item="store.removeListItem"
+      @end-session="onEndActive"
+      @end-session-no-confirm="onEndActiveNoConfirm"
       @refresh-items="() => store.loadSessionListItems(store.activeSession!._id || store.activeSession!.session)"
     />
   </div>
@@ -318,6 +320,30 @@ async function onEndActive() {
   if (!sessionId) return;
 
   if (!confirm('End the current session? This will mark it inactive.')) return;
+
+  ending.value = true;
+  try {
+    await store.deactivateSession({ sessionId, sessionOwner: owner });
+    // refresh local state
+    await store.fetchSessions();
+    await store.fetchActiveForOwner(owner);
+  } catch (e: any) {
+    console.error('End session failed', e);
+    alert('End session failed: ' + (e?.message ?? String(e)));
+  } finally {
+    ending.value = false;
+  }
+}
+
+// End the current session without asking the user to confirm.
+// This is wired to the new 'End session' button which should skip the confirmation prompt.
+async function onEndActiveNoConfirm() {
+  const session = displayedSession.value;
+  if (!session) return;
+  const sessionId = (session as any)._id ?? (session as any).session;
+  const owner = auth.username ?? (auth as any)?._id ?? '';
+  if (!owner) { alert('Not authenticated'); return; }
+  if (!sessionId) return;
 
   ending.value = true;
   try {

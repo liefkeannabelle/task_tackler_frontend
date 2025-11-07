@@ -264,6 +264,12 @@ export const useListsStore = defineStore('lists', {
         const actor = adder ?? auth.username;
         if (!actor) throw new Error('Adder required (login or provide adder).');
         const res = await addTaskToList({ list: listId, task, adder: actor });
+        // backend may return a success HTTP status but include an error descriptor
+        // inside the returned payload (e.g. { listItem: { error: "..." } }).
+        // Normalize that into a thrown Error so callers can handle/display it.
+        if (res && (res as any).listItem && (res as any).listItem.error) {
+          throw new Error((res as any).listItem.error);
+        }
         await this.refreshList(listId);
         await this.fetchAll(auth.username);
         return res;

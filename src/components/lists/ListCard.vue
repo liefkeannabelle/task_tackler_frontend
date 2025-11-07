@@ -2,7 +2,6 @@
   <div class="list-card">
     <header class="card-header">
       <h3>{{ list.title || list.listName || 'Untitled' }}</h3>
-      <small>Owner: {{ list.owner }}</small>
       <button class="delete-list" @click="confirmDelete">Delete List</button>
     </header>
 
@@ -35,8 +34,7 @@
         <button type="button" @click="clearSelection">Change</button>
       </div>
 
-      <input v-model="adder" :placeholder="adderPlaceholder" />
-      <button @click="addTask" :disabled="!selectedTaskId || !adder">Add</button>
+  <button @click="addTask" :disabled="!selectedTaskId">Add</button>
     </div>
 
     <div v-if="items.length === 0" class="empty">No items</div>
@@ -79,9 +77,7 @@ const search = ref('');
 const showResults = ref(false);
 const selectedTaskId = ref('');
 const selectedTaskName = ref('');
-const adder = ref(auth.username || '');
-const adderPlaceholder = computed(() => auth.username || 'your-id');
-watch(() => auth.username, v => { if (v) adder.value = v; });
+// we rely on the logged-in user from auth when emitting add-task (no adder input)
 
 // list items safe accessor (avoids reading undefined)
 const items = computed(() => {
@@ -128,7 +124,7 @@ function addTask() {
     alert('Cannot determine list id.');
     return;
   }
-  emit('add-task', { listId, task: selectedTaskId.value, adder: adder.value || undefined });
+  emit('add-task', { listId, task: selectedTaskId.value });
   clearSelection();
 }
 

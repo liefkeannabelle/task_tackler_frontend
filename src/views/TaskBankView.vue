@@ -63,12 +63,15 @@ function refresh() {
   load();
 }
 
-async function onAdd(payload: { adder: string; name: string; description?: string }) {
+async function onAdd(payload: { name: string; description?: string }) {
   try {
-    await taskBank.addTask(payload.adder || undefined, payload.name, payload.description);
+    const adder = auth.username ?? (auth as any)?._id ?? undefined;
+    await taskBank.addTask(adder, payload.name, payload.description);
     await load();
   } catch (e) {
     console.error('add task failed', e);
+    const msg = (e as any)?.message ?? 'Failed to add task.';
+    alert(msg);
   }
 }
 

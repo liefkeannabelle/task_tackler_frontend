@@ -162,7 +162,26 @@ async function createList(payload: { name: string; owner?: string }) {
 
 async function onAddTask(payload: { listId: string; task: string; adder?: string }) {
   if (!payload?.listId || !payload?.task) return;
-  await store.addTask(payload.listId, payload.task, payload.adder);
+  try {
+    await store.addTask(payload.listId, payload.task, payload.adder);
+  } catch (e: any) {
+    console.error('addTask failed', e);
+    // show a user-friendly popup with the server-provided error when available
+    let msg = (e && e.message) ? e.message : 'Failed to add task to list.';
+    // try to show the task's human-friendly name instead of id in the error message
+    try {
+      const tid = payload.task;
+      const found = (taskBank.tasks || []).find((t: any) => (t._id === tid || t.task === tid || t.id === tid));
+      const display = found ? (found.taskName ?? found.name ?? tid) : tid;
+      // replace any raw id occurrences in the server message with the display name
+      if (typeof msg === 'string' && typeof tid === 'string' && tid && display) {
+        msg = msg.split(tid).join(display);
+      }
+    } catch (replaceErr) {
+      console.debug('could not replace task id in message', replaceErr);
+    }
+    alert(msg);
+  }
 }
 
 async function onDeleteTask(payload: { listId: string; taskId: string; deleter?: string }) {

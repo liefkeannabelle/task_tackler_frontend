@@ -29,6 +29,10 @@
       </template>
     </div>
 
+    <!-- end-session button when all items complete -->
+    <div v-if="sessionActive && allComplete" class="end-session-row">
+      <button class="end-session-btn" @click="onEndSession">End session</button>
+    </div>
   </div>
 </template>
 
@@ -48,6 +52,8 @@ const emit = defineEmits<{
   (e: 'add-item', payload: { session: string; task: string; defaultOrder?: number }): void;
   (e: 'remove-item', payload: { session: string; task: string }): void;
   (e: 'refresh-items'): void;
+  (e: 'end-session'): void;
+  (e: 'end-session-no-confirm'): void;
 }>();
 
 // computed ordering and next actionable item
@@ -66,6 +72,15 @@ const sortedItems = computed(() => {
 
 const nextIndex = computed(() => sortedItems.value.findIndex((it: any) => (it?.itemStatus ?? 'Incomplete') !== 'Complete'));
 const sessionActive = computed(() => !!props.session?.active);
+
+const allComplete = computed(() => {
+  const items = sortedItems.value || [];
+  if (!items.length) return false;
+  return items.every((it: any) => {
+    const status = (it.itemStatus ?? (props.taskStatuses?.[it.task ?? it.taskId ?? '']) ?? 'Incomplete');
+    return status === 'Complete';
+  });
+});
 
 const taskId = ref('');
 const defaultOrder = ref<number | null>(null);
@@ -95,6 +110,12 @@ function remove(payload: { task: string }) {
   const sid = props.session?._id ?? props.session?.session;
   if (!sid || !payload?.task) return;
   emit('remove-item', { session: sid, task: payload.task });
+}
+
+function onEndSession() {
+  // Emit a special event that indicates no confirmation should be requested by the parent.
+  // This lets the new 'End session' button end the session immediately without the prompt.
+  emit('end-session-no-confirm');
 }
 </script>
 
@@ -160,4 +181,19 @@ function remove(payload: { task: string }) {
   background: transparent; color: var(--accent); border: 1px solid rgba(255,255,255,0.04);
   padding:.35rem .6rem; border-radius:6px; cursor:pointer;
 }
+.end-session-row {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+.end-session-btn {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.end-session-btn:hover { opacity: 0.95; transform: translateY(-1px); }
 </style>
