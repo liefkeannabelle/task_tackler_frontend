@@ -1,14 +1,14 @@
 <template>
-  <div class="session-list-item">
+  <div class="session-list-item session-row">
     <div class="item-main">
-      <span class="item-name">{{ item.taskName ?? item.taskNameResolved ?? item.taskId ?? item.task ?? item._id }}</span>
-      <span class="item-meta">(#{{ item.defaultOrder ?? item.randomOrder ?? '?' }})</span>
-      <span class="item-status">[{{ item.itemStatus ?? status ?? 'Unknown' }}]</span>
-    </div>
+        <span class="item-name">{{ item.taskName ?? item.taskNameResolved ?? item.taskId ?? item.task ?? item._id }}</span>
+      </div>
 
-    <div class="item-actions">
-      <button @click="onStart">Start</button>
-      <button @click="onComplete">Complete</button>
+      <div class="item-status">{{ item.itemStatus ?? status ?? 'Unknown' }}</div>
+
+      <div class="item-actions">
+      <button v-if="props.sessionActive" @click="onStart">Start</button>
+      <button v-if="props.sessionActive" @click="onComplete">Complete</button>
       <button @click="onRemove">Remove</button>
     </div>
   </div>
@@ -21,6 +21,7 @@ import { defineProps, defineEmits } from 'vue';
 const props = defineProps<{
   item: Record<string, any>;
   sessionId?: string;
+  sessionActive?: boolean;
   status?: string;
 }>();
 
@@ -50,9 +51,22 @@ function onRemove() {
 </script>
 
 <style scoped>
-.session-list-item { display:flex; justify-content:space-between; align-items:center; padding:.25rem .5rem; border:1px solid #eee; border-radius:4px; }
-.item-name { font-weight:600; margin-right:.5rem; }
-.item-meta { color:#666; margin-left:.5rem; }
-.item-status { margin-left:.5rem; color:#333; }
-.item-actions { display:inline-flex; gap:.25rem; }
+.session-list-item {
+  /* visual container for a row; grid layout is provided by the shared .session-row class */
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+.session-row {
+  display: grid;
+  grid-template-columns: var(--session-grid, 1fr 160px auto);
+  gap: 0.5rem;
+  align-items: center;
+  padding: .25rem .5rem;
+  min-height: 34px;
+}
+.item-main { grid-column: 1; display:flex; align-items:center; gap:.5rem; }
+.item-name { font-weight: 600; }
+.item-meta { color: #666; margin-left: .5rem; }
+.item-status { grid-column: 2; justify-self: center; text-align: center; color: var(--text); }
+.item-actions { grid-column: 3; justify-self: end; display: inline-flex; gap: .25rem; }
 </style>

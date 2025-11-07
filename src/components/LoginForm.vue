@@ -2,11 +2,12 @@
   <div class="login-form">
     <template v-if="!auth.isLoggedIn">
       <input v-model="name" placeholder="Enter username" @keyup.enter="login" />
-      <button class="login-btn logout-btn region-muted" @click="login" :disabled="!name">Login</button>    </template>
+      <button class="login-btn" @click="login" :disabled="!name">Login</button>
+    </template>
     <template v-else>
       <!-- apply region-muted so text uses the muted color -->
       <span class="region-muted">Signed in as <strong>{{ auth.username }}</strong></span>
-      <button class="logout-btn region-muted" @click="logout">Logout</button>
+      <button class="logout-btn" @click="logout">Logout</button>
     </template>
   </div>
 </template>

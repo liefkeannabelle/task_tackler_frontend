@@ -242,8 +242,12 @@ export const useListsStore = defineStore('lists', {
       try {
         const owner = ownerId ?? auth.username;
         if (!owner) throw new Error('Owner required (login or supply ownerId).');
-        await newList({ listName: name, listOwner: owner });
+        // capture created list id if returned by the API
+        const res = await newList({ listName: name, listOwner: owner });
+        // refresh the local lists view for the owner
         await this.fetchAll(owner);
+        // return created id (API returns { list: string } by convention)
+        return res?.list ?? null;
       } catch (e: any) {
         this.error = e?.message ?? String(e);
         throw e;

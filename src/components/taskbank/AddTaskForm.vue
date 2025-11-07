@@ -30,14 +30,23 @@ function submit() {
 </script>
 
 <style scoped>
-.add-task-form { display:flex; gap:.5rem; align-items:center; }
+.add-task-form {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  /* surface panel behind the form */
+  background: var(--surface);
+  padding: .5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+}
 .add-task-form input { padding:.25rem .5rem; }
 
 /* make the Add Task button use the theme surface/text colors */
 .add-task-form button {
   background: var(--surface);
   color: var(--text);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(0,0,0,0.06);
   padding: .35rem .6rem;
   border-radius: 6px;
   cursor: pointer;

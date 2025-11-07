@@ -461,6 +461,9 @@ export const useSessionStore = defineStore('session', {
     // Per-session item cache (preferred vs single global list)
     listItemsBySession: {} as Record<string, SessionListItem[]>,
 
+  // Track sessions that were ended locally so we can reset statuses on next activation
+  endedSessions: {} as Record<string, boolean>,
+
     // Convenience pointer that components bind to for current active session items
     listItems: [] as SessionListItem[],
 
@@ -734,7 +737,18 @@ export const useSessionStore = defineStore('session', {
         if (!payload.session) return;
         await endSession(payload);
         const activeId = this.activeSession?._id ?? (this.activeSession as any)?.session;
+
+        // Mark this session as ended so that when it is re-activated we reset all task statuses
+        this.endedSessions = { ...(this.endedSessions || {}), [payload.session]: true };
+
+        // If we have a cached list for this session, reset the itemStatus locally to 'Incomplete'
+        const cached = this.listItemsBySession?.[payload.session];
+        if (Array.isArray(cached)) {
+          this.listItemsBySession[payload.session] = cached.map(it => ({ ...it, itemStatus: 'Incomplete' }));
+        }
+
         if (activeId && activeId === payload.session) {
+          // clear active view and statuses
           this.activeSession = null;
           this.listItems = [];
           this.taskStatuses = {};
@@ -827,7 +841,26 @@ export const useSessionStore = defineStore('session', {
         const items = await getSessionListItems(sessionId);
         console.debug('[session.store] raw session list items', sessionId, items);
 
-        const normalized = Array.isArray(items) ? items.map((it: any) => ({ ...it })) : [];
+        let normalized = Array.isArray(items) ? items.map((it: any) => ({ ...it })) : [];
+
+        // If this session was ended locally, reset all item statuses to Incomplete
+        if (this.endedSessions && this.endedSessions[sessionId]) {
+          normalized = normalized.map((it: any) => ({ ...it, itemStatus: 'Incomplete' }));
+
+          // Also clear any tracked task statuses for these tasks in the quick lookup
+          for (const it of normalized) {
+            try {
+              if (it && it.taskId) delete this.taskStatuses[it.taskId];
+            } catch {
+              // ignore
+            }
+          }
+
+          // consume the ended marker so reset happens only once
+          const copy = { ...this.endedSessions };
+          delete copy[sessionId];
+          this.endedSessions = copy;
+        }
 
         // write into per-session cache
         this.listItemsBySession[sessionId] = normalized;

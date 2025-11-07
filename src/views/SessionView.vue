@@ -337,9 +337,23 @@ async function onEndActive() {
 <style scoped>
 .session-view { padding: 1rem; }
 .error { color: red; }
-.create-session-modal { margin: 1rem 0; padding: .75rem; border: 1px solid #ddd; border-radius:6px; background:#fafafa; }
+.create-session-modal {
+  margin: 1rem 0;
+  padding: .75rem;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
 .create-session-modal .cancel { margin-top:.5rem; }
-.session-summary { border: 1px solid #eee; padding: .75rem; margin: 1rem 0; border-radius:6px; background: #fff; }
+.session-summary {
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: .75rem;
+  margin: 1rem 0;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
 .session-summary h3 { margin-top: 0; }
 .controls { margin-bottom: 0.75rem; }
 .actions { margin-top: .5rem; display:flex; gap:.5rem; }

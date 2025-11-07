@@ -85,6 +85,18 @@ async function handleCreate(payload: { list: string; ordering: string; format: s
 </script>
 
 <style scoped>
-.create-session-form { display:flex; flex-direction:column; gap:.5rem; max-width:420px; }
-.actions { margin-top:.5rem; display:flex; justify-content:flex-end; }
+.create-session-form {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  max-width: 420px;
+  /* surface panel behind the form to match other sections */
+  background: var(--surface);
+  padding: .75rem;
+  border-radius: 8px;
+  /* match session-list border/weight so colors feel the same */
+  border: 1px solid rgba(0,0,0,0.06);
+  color: var(--text);
+}
+.actions { margin-top: .5rem; display:flex; justify-content:flex-end; }
 </style>

@@ -114,7 +114,16 @@ function del() {
 </script>
 
 <style scoped>
-.session-controls { border:1px solid #ddd; padding:.75rem; border-radius:6px; margin-bottom:.75rem; }
+.session-controls {
+  /* match other card/panel surfaces */
+  background: var(--surface);
+  padding: .75rem;
+  border-radius: 6px;
+  margin-bottom: .75rem;
+  border: 1px solid rgba(0,0,0,0.02);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+  color: var(--text);
+}
 .row { display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; }
 </style>
 // ...existing code...

@@ -1,6 +1,6 @@
 <template>
   <div class="taskbank-view">
-    <h1 class="tasks-header">Task Bank</h1>
+  <h1>Task Bank</h1>
 
 
 
@@ -119,14 +119,7 @@ async function onDepsSaved(payload: { taskId: string; dependencies: { depTask: s
 }
 
 /* header panel */
-.tasks-header {
-  background: var(--surface);
-  color: var(--text);
-  padding: .6rem .85rem;
-  border-radius: 6px;
-  margin: 0 0 1rem 0;
-  font-size: 1.35rem;
-}
+
 
 /* task list container — group of panels */
 .task-list {

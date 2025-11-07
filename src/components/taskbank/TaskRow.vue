@@ -6,8 +6,8 @@
     </div>
     <div class="actions">
       <!-- emit the task as payload -->
-      <button @click="$emit('edit-deps', task)">Dependencies</button>
-      <button @click="requestDelete">Delete</button>
+      <button class="primary" @click="$emit('edit-deps', task)">Dependencies</button>
+  <button class="primary" @click="requestDelete">Delete</button>
     </div>
   </div>
 </template>
@@ -49,13 +49,27 @@ border: 1px solid rgba(255,255,255,0.04);
 }
 
 .actions button {
-margin-left:.5rem;
-background: transparent;
-color: var(--text);
-border: 1px solid rgba(255,255,255,0.04);
-padding: .25rem .5rem;
-border-radius:4px;
-cursor: pointer;
+  margin-left: .5rem;
+  padding: .35rem .6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
 }
-.actions button:hover { filter: brightness(1.03); }
+
+/* primary (Dependencies) */
+.actions button.primary {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border: none;
+}
+.actions button.primary:hover { filter: brightness(0.95); transform: translateY(-1px); }
+
+/* delete as a secondary / surface button */
+.actions button.delete {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.actions button.delete:hover { filter: brightness(0.98); }
 </style>

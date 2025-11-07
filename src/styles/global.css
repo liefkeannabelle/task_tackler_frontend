@@ -1,38 +1,116 @@
+/* Theme variables -- neutral beige background, lighter surface panels, green accent for buttons */
 :root {
-  --bg: #02351c;        /* page background */
-  --text: #271e01;      /* primary text */
-  --surface: #edf0d9;   /* card/panel background */
-  --muted: #edf0d9;     /* secondary text */
-  --accent: #4f9cff;    /* buttons / links */
+  /* neutral background (light beige, slightly darker than panels) */
+  --bg: #efe6d8;        /* page background (neutral beige) */
+  --text: #22221f;      /* primary text (dark gray) */
+  --surface: #fbf7ef;   /* panel/card surface (lighter than background) */
+  --muted: #7b7262;     /* secondary text */
+  --accent: #0b492b;    /* green pop for buttons */
+  --accent-foreground: #ffffff; /* text color on accent buttons */
+  --max-content-width: 66vw; /* ~2/3 of screen */
 }
-.region-muted { color: var(--muted); }
 
-/* dark theme vars example; toggle with .theme-light on <html> or <body> */
+/* base typography & rendering */
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* layout: center app and constrain width to ~2/3 of viewport */
+#app {
+  width: min(var(--max-content-width), 1200px);
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+/* header: serifed font */
+h1, h2, h3 {
+  font-family: Georgia, "Times New Roman", Times, serif;
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+}
+
+/* links and accents */
+a {
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover { filter: brightness(0.95); }
+
+/* primary buttons: green pop */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.55em 0.9em;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
+  transition: filter .12s ease, transform .06s ease;
+}
+button:hover { filter: brightness(0.95); transform: translateY(-1px); }
+button:focus { outline: 3px solid rgba(22,163,74,0.16); }
+
+/* secondary buttons (if needed) */
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* card / panel */
+.card, .panel, .session-list-item, .list-card, .task-row {
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+/* utility classes */
+.muted, .region-muted { color: var(--muted); font-size: 0.95rem; }
+.empty { color: var(--muted); font-style: italic; }
+
+/* form inputs */
+input, textarea, select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+/* responsive tweaks */
+@media (max-width: 900px) {
+  :root { --max-content-width: 92vw; }
+  #app { padding: 1rem; }
+}
+
+/* light-mode override (optional toggle by adding .theme-light on body/html) */
 .theme-light {
-  --bg: #ffffff;
+  --bg: #f7f7ef;
   --text: #111827;
   --surface: #ffffff;
   --muted: #6b7280;
-  --accent: #1f6feb;
+  --accent: #0b492b;
+  --accent-foreground: #ffffff;
 }
-
-html, body, #app {
-  height: 100%;
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* sensible defaults so components inherit colors */
-* { box-sizing: border-box; }
-a { color: var(--accent); }
-button { color: var(--text); background: transparent; border-color: rgba(255,255,255,0.06); }
-
-/* common UI surfaces */
-.session-view, .session-summary, .create-session-modal, .session-list, .session-list-item {
-  background: var(--surface);
-  color: var(--text);
-}
-
-/* muted text */
-.muted { color: var(--muted); }
