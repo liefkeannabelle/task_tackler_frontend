@@ -1,17 +1,27 @@
-// import { createApp } from 'vue'
 // import './style.css'
-// import App from './App.vue'
 
-// createApp(App).mount('#app')
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
-import { router } from './router';
+import { router } from './router'; // ensure your router export is named 'router' or update import
 import initSse from './lib/sse-client';
-import './styles/global.css'
+import { useSessionStore } from './stores/session';
+import './styles/global.css';
 
 const app = createApp(App);
-app.use(createPinia());
+
+// Install Pinia
+const pinia = createPinia();
+app.use(pinia);
+
+// Register router BEFORE mounting so <router-view/> is resolved
 app.use(router);
-initSse();
+
+// Mount the app
 app.mount('#app');
+
+// After Pinia is installed (and router registered), start SSE
+// Keep the EventSource alive by storing it globally
+const store = useSessionStore();
+const es = initSse(store);
+;(window as any).__es = es;
