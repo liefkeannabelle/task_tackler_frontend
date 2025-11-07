@@ -1,4 +1,3 @@
-// ...existing code...
 import { defineStore } from 'pinia';
 import type { TaskDocument, Dependency } from '../api/client';
 import {
@@ -63,7 +62,9 @@ export const useTaskBankStore = defineStore('taskbank', {
       this.error = '';
       const auth = useAuthStore();
       try {
-        const actor = adder ?? auth.username;
+        // Prefer canonical user id when available, fall back to username.
+        // This reduces the need for the UI to prompt for an explicit id.
+        const actor = adder ?? (auth as any)._id ?? auth.username;
         if (!actor) throw new Error('Adder required (login or provide adder).');
         const res = await addTaskToBank({ adder: actor, name, description });
         return res;
@@ -80,7 +81,10 @@ export const useTaskBankStore = defineStore('taskbank', {
       this.error = '';
       const auth = useAuthStore();
       try {
-        const actor = deleter ?? auth.username;
+        // Prefer canonical user id when available, fall back to username.
+        // This ensures the server receives an id when possible and avoids
+        // prompting the user for an id in the UI.
+        const actor = deleter ?? (auth as any)._id ?? auth.username;
         if (!actor) throw new Error('Deleter required (login or provide deleter).');
         await deleteTaskFromBank({ deleter: actor, task });
         this.tasks = this.tasks.filter(t => (t._id || (t as any).taskName) !== task);
@@ -95,8 +99,9 @@ export const useTaskBankStore = defineStore('taskbank', {
     async updateDeps(taskId: string, newDeps: { depTask: string; depRelation: string }[]) {
       this.loading = true;
       try {
-        const authStore = useAuthStore();
-        const adder = authStore.username ?? (authStore as any)._id;
+  const authStore = useAuthStore();
+  // Prefer canonical user id when available. Some auth stores set `_id`.
+  const adder = (authStore as any)._id ?? authStore.username;
         if (!adder) throw new Error('Not authenticated');
 
         // find current task in local cache

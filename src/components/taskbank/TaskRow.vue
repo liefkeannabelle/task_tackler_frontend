@@ -13,10 +13,23 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from '/src/stores/auth.ts';
+
 const props = defineProps<{ task: Record<string, any> }>();
 const emit = defineEmits<{ (e: 'delete', payload: { deleter: string; task: string }): void; (e: 'edit-deps', task: Record<string, any>): void }>();
 
+// Use the auth store to prefer a canonical user id, falling back to username.
+// Only prompt the user if no authenticated identity is available.
+const auth = useAuthStore();
+
 function requestDelete() {
+  const actor = (auth as any)._id ?? auth.username ?? '';
+  if (actor) {
+    emit('delete', { deleter: actor, task: props.task._id || props.task.taskName || '' });
+    return;
+  }
+
+  // Last-resort: fall back to prompting when no auth info is present.
   const deleter = prompt('Your ID to delete this task:') || '';
   if (!deleter) return;
   emit('delete', { deleter, task: props.task._id || props.task.taskName || '' });
