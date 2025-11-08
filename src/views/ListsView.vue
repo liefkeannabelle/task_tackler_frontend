@@ -14,7 +14,7 @@
       <div v-if="store.loading">Loading...</div>
       <div v-if="store.error" class="error">{{ store.error }}</div>
       <div v-for="l in definedLists" :key="l._id" :id="'list-' + (l._id ?? (l as any).id)" tabindex="-1">
-        <ListCard :list="l" @add-task="onAddTask" @delete-task="onDeleteTask" @assign-order="onAssignOrder" />
+  <ListCard :list="l!" @add-task="onAddTask" @delete-task="onDeleteTask" @assign-order="onAssignOrder" />
       </div>
     </div>
   </div>
