@@ -70,8 +70,9 @@ const newRel = ref('');
 // candidate tasks to add (exclude the current task and already added deps)
 const candidates = computed(() => {
   const all = Array.isArray(taskBank.tasks) ? taskBank.tasks : [];
-  if (!props.task) return [];
-  return all.filter((t: any) => (t._id !== props.task._id) && !deps.value.some(d => d.depTask === t._id));
+  const cur = props.task;
+  if (!cur) return [];
+  return all.filter((t: any) => (t._id !== cur._id) && !deps.value.some(d => d.depTask === t._id));
 });
 
 // keep local deps in sync if prop changes

@@ -107,9 +107,8 @@ function focusPrev() {
 }
 
 function acceptFocused() {
-  if (focusedIndex.value >= 0 && matches.value[focusedIndex.value]) {
-    selectList(matches.value[focusedIndex.value]);
-  }
+  const item = matches.value[focusedIndex.value];
+  if (focusedIndex.value >= 0 && item) selectList(item);
 }
 
 function selectList(l: any) {

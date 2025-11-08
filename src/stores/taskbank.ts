@@ -4,11 +4,6 @@ import {
   listTasks,
   addTaskToBank,
   deleteTaskFromBank,
-  addDependency,
-  deleteDependency,
-  getDependencies,
-  evaluateTaskOrder,
-  getTasks, 
   addDependency as apiAddDependency,
   deleteDependency as apiDeleteDependency,
 } from '../api/client';

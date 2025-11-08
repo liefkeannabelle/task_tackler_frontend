@@ -39,7 +39,7 @@ const auth = useAuthStore();
 // unless you persist order to the backend.
 const searchSelectBehavior: 'scroll' | 'bring-to-top' = 'scroll';
 
-async function onSearchSelect(list: any) {
+async function onSearchSelect(list: any | undefined) {
   if (!list) return;
   const targetId = `list-${list._id}`;
 

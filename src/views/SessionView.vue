@@ -122,22 +122,7 @@ const displayedSessionId = computed(() => {
   return s._id ?? s.session ?? null;
 });
 
-// resolve task name for a list item by looking up taskBank.tasks or using backend-provided name
-function resolveTaskNameForItem(item: any) {
-  if (!item) return 'Unknown Task';
-
-  // Prefer backend-provided taskName
-  if (item.taskName && String(item.taskName).trim().length) return item.taskName;
-
-  // fall back to taskId lookup in task bank (only if backend did not provide it)
-  const tId = item.taskId ?? item.task ?? item.bankTaskId ?? item.taskBankId ?? null;
-  if (!tId) return item.taskName ?? 'Unknown Task';
-
-  const found = (taskBank.tasks || []).find((t: any) =>
-    t._id === tId || t.bankId === tId || t.id === tId
-  );
-  return found?.taskName ?? found?.name ?? item.taskName ?? 'Unknown Task';
-}
+// resolveTaskNameForItem removed; enrichment handled by `enrichListItems` and `itemsWithNames`.
 
 // Enrich store.listItems in-place with taskName if backend didn't provide it.
 // This ensures downstream components (SessionList) see item.taskName directly.
@@ -170,8 +155,7 @@ const itemsWithNames = computed(() => {
   return items.map((it: any) => ({ ...it }));
 });
 
-// add this alias so template references to `items` resolve (fixes the Vue warn)
-const items = itemsWithNames;
+// `itemsWithNames` is the canonical enriched items computed used by child components.
 
 // key for SessionList to force rerender when session or item count changes
 const sessionListKey = computed(() => {

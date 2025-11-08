@@ -428,15 +428,13 @@ import {
   deleteSession,
   addListItemToSession,
   removeListItemFromSession,
-  getSession,
   getTaskStatus,
   getSessionListItems,
   getSessionForOwner,
   getActiveSessionForOwner,
-  getSessionByOwner as apiGetSessionByOwner,
+  // getSession,
 } from '../api/client';
 import { useAuthStore } from './auth';
-import { useTaskBankStore } from './taskbank';
 
 function normalizeSessionObj(raw: any) {
   if (!raw) return null;

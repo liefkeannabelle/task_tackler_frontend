@@ -82,10 +82,7 @@ const allComplete = computed(() => {
   });
 });
 
-const taskId = ref('');
-const defaultOrder = ref<number | null>(null);
-
-// add-item UI not currently used; remove to avoid unused-declaration build errors
+// add-item UI not currently used; declarations removed to avoid unused-declaration build errors
 
 function start(payload: { task: string }) {
   const sid = props.session?._id ?? props.session?.session;

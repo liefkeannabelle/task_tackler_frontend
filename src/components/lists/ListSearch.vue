@@ -181,9 +181,8 @@ function ensureFocusedVisible() {
 }
 
 function acceptFocused() {
-  if (focusedIndex.value >= 0 && matches.value[focusedIndex.value]) {
-    select(matches.value[focusedIndex.value]);
-  }
+  const item = matches.value[focusedIndex.value];
+  if (focusedIndex.value >= 0 && item) select(item);
 }
 
 function select(list: ListDoc) {

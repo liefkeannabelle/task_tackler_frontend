@@ -61,9 +61,7 @@ async function load() {
 onMounted(() => load());
 watch(() => auth.username, () => load());
 
-function refresh() {
-  load();
-}
+// refresh helper removed; call load() directly where needed
 
 async function onAdd(payload: { name: string; description?: string }) {
   try {
