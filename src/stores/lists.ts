@@ -17,14 +17,7 @@ import { useAuthStore } from './auth';
 import { useTaskBankStore } from './taskbank';
 
 // helper functions for dependency relation semantics
-function relationRequiresEarlier(relation: string) {
-  // returns true if the depTask must appear earlier than the subject task
-  return relation === 'REQUIRES' || relation === 'BLOCKED_BY' || relation === 'FOLLOWS';
-}
-function relationRequiresLater(relation: string) {
-  // returns true if the depTask must appear later than the subject task
-  return relation === 'REQUIRED_BY' || relation === 'BLOCKS' || relation === 'PRECEDES';
-}
+// (validation helpers are defined locally inside validateOrderConstraints)
 
 /**
  * Validate that moving `taskId` to `newOrder` within the listItems doesn't violate dependencies.
@@ -70,8 +63,9 @@ function validateOrderConstraints(
   }
 
   // helper relation checks (same logic as before)
-  const relationRequiresEarlier = (r: string) => ['REQUIRES','BLOCKED_BY','FOLLOWS'].includes(r);
-  const relationRequiresLater = (r: string) => ['REQUIRED_BY','BLOCKS','PRECEDES'].includes(r);
+  // normalize check functions to accept lowercase 'precedes'/'follows' and be robust to legacy uppercase
+  const relationRequiresEarlier = (r: string) => ['follows'].includes(String(r ?? '').toLowerCase());
+  const relationRequiresLater = (r: string) => ['precedes'].includes(String(r ?? '').toLowerCase());
 
   function labelFor(id: string) {
     const t = tasksMap.get(id);
@@ -124,10 +118,7 @@ function validateOrderConstraints(
 }
 // ...existing code...
 
-function labelFor(id: string, tasksById: Map<string, any>) {
-  const t = tasksById.get(id);
-  return t ? (t.taskName ?? t.name ?? id) : id;
-}
+// legacy helper removed; use local labelFor inside validation where needed
 
 export const useListsStore = defineStore('lists', {
   state: () => ({
@@ -343,16 +334,17 @@ export const useListsStore = defineStore('lists', {
         const auth = useAuthStore();
         const username = auth?.username;
 
-        // Prefer owner-scoped backend call (backend accepts username or owner id)
-        if (username) {
-          const ownerId =  (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
-          const payload: any = ownerId ? {ownerId} : {owner : username ?? (auth as any)?.username };
+        // If caller provided an explicit owner argument, prefer it (caller may supply id or username)
+        if (owner && String(owner).trim()) {
+          const payload: any = { owner: String(owner).trim() };
           const res: any = await apiGetListsByOwner(payload);
-          if (res && Array.isArray(res.lists)) {
-            this.lists = res.lists;
-          } else {
-            this.lists = [];
-          }
+          if (res && Array.isArray(res.lists)) this.lists = res.lists; else this.lists = [];
+        } else if (username) {
+          // Prefer owner-scoped backend call (backend accepts username or owner id)
+          const ownerId = (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
+          const payload: any = ownerId ? { ownerId } : { owner: username };
+          const res: any = await apiGetListsByOwner(payload);
+          if (res && Array.isArray(res.lists)) this.lists = res.lists; else this.lists = [];
         } else {
           // fallback to global fetch (should not happen for logged-in flows)
           const raw = await getLists();

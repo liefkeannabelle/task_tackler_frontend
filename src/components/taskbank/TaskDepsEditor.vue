@@ -59,17 +59,11 @@ const emit = defineEmits<{ (e: 'save', payload: { taskId: string; dependencies: 
 const taskBank = useTaskBankStore();
 
 // relation options mirror backend RelationType
-const relations = [
-  'BLOCKS',
-  'BLOCKED_BY',
-  'PRECEDES',
-  'FOLLOWS',
-  'REQUIRES',
-  'REQUIRED_BY'
-];
+// Backend now uses only 'precedes' and 'follows' (lowercase)
+const relations = [ 'precedes', 'follows' ];
 
-// local copy of dependencies as { depTask, depRelation }[]
-const deps = ref<{ depTask: string; depRelation: string }[]>((props.task?.dependencies && Array.isArray(props.task.dependencies)) ? props.task.dependencies.map((d: any) => ({ depTask: d.depTask, depRelation: d.depRelation })) : []);
+// local copy of dependencies as { depTask, depRelation }[] (normalize relation to lowercase)
+const deps = ref<{ depTask: string; depRelation: string }[]>((props.task?.dependencies && Array.isArray(props.task.dependencies)) ? props.task.dependencies.map((d: any) => ({ depTask: d.depTask, depRelation: String(d.depRelation ?? '').toLowerCase() })) : []);
 const newDep = ref('');
 const newRel = ref('');
 
@@ -82,7 +76,7 @@ const candidates = computed(() => {
 
 // keep local deps in sync if prop changes
 watch(() => props.task?.dependencies, (v) => {
-  deps.value = Array.isArray(v) ? v.map((d: any) => ({ depTask: d.depTask, depRelation: d.depRelation })) : [];
+  deps.value = Array.isArray(v) ? v.map((d: any) => ({ depTask: d.depTask, depRelation: String(d.depRelation ?? '').toLowerCase() })) : [];
 });
 
 function labelFor(id: string) {
@@ -92,15 +86,17 @@ function labelFor(id: string) {
 
 function addDep() {
   if (!newDep.value || !newRel.value) return;
-  if (!deps.value.some(d => d.depTask === newDep.value && d.depRelation === newRel.value)) {
-    deps.value.push({ depTask: newDep.value, depRelation: newRel.value });
+  const normRel = String(newRel.value).toLowerCase();
+  if (!deps.value.some(d => d.depTask === newDep.value && d.depRelation === normRel)) {
+    deps.value.push({ depTask: newDep.value, depRelation: normRel });
   }
   newDep.value = '';
   newRel.value = '';
 }
 
 function removeDep(entry: { depTask: string; depRelation: string }) {
-  deps.value = deps.value.filter(d => !(d.depTask === entry.depTask && d.depRelation === entry.depRelation));
+  const normRel = String(entry.depRelation ?? '').toLowerCase();
+  deps.value = deps.value.filter(d => !(d.depTask === entry.depTask && d.depRelation === normRel));
 }
 
 function onSave() {

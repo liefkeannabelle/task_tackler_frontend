@@ -213,8 +213,11 @@ onMounted(() => {
 
 <style scoped>
 .list-search {
+  box-sizing: border-box;
   position: relative;
-  max-width: 420px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
   /* panel surface style to match other forms */
   background: var(--surface);
   padding: 0.5rem;

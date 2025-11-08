@@ -108,17 +108,21 @@ export const useTaskBankStore = defineStore('taskbank', {
         const currentTask = (this.tasks || []).find((t: any) => t._id === taskId);
 
         // safely build a currentDeps array (avoid accessing possibly undefined properties)
+        // normalize existing dependencies to lowercase relations for robust comparison
         let currentDeps: { depTask: string; depRelation: string }[] = [];
         if (currentTask && Array.isArray((currentTask as any).dependencies)) {
           currentDeps = (currentTask as any).dependencies.map((d: any) => ({
             depTask: d.depTask,
-            depRelation: d.depRelation
+            depRelation: String(d.depRelation ?? '').toLowerCase()
           }));
         }
 
         // compute adds/removes by comparing arrays
-        const toAdd = newDeps.filter(nd => !currentDeps.some(cd => cd.depTask === nd.depTask && cd.depRelation === nd.depRelation));
-        const toRemove = currentDeps.filter(cd => !newDeps.some(nd => nd.depTask === cd.depTask && nd.depRelation === cd.depRelation));
+  // normalize newDeps relations as well
+  const normalizedNewDeps = (Array.isArray(newDeps) ? newDeps : []).map(nd => ({ depTask: nd.depTask, depRelation: String(nd.depRelation ?? '').toLowerCase() }));
+
+  const toAdd = normalizedNewDeps.filter(nd => !currentDeps.some(cd => cd.depTask === nd.depTask && cd.depRelation === nd.depRelation));
+  const toRemove = currentDeps.filter(cd => !normalizedNewDeps.some(nd => nd.depTask === cd.depTask && nd.depRelation === cd.depRelation));
 
         // perform deletions first
         for (const rem of toRemove) {
@@ -126,7 +130,8 @@ export const useTaskBankStore = defineStore('taskbank', {
             deleter: adder,
             sourceTask: taskId,
             targetTask: rem.depTask,
-            relation: rem.depRelation
+            // ensure we send the normalized relation string expected by backend
+            relation: String(rem.depRelation ?? '').toLowerCase()
           });
         }
 
@@ -136,14 +141,15 @@ export const useTaskBankStore = defineStore('taskbank', {
             adder,
             task1: taskId,
             task2: add.depTask,
-            dependency: add.depRelation
+            dependency: String(add.depRelation ?? '').toLowerCase()
           });
         }
 
         // update local cache if present (safe check of index)
         const idx = (this.tasks || []).findIndex((t: any) => t._id === taskId);
         if (idx !== -1 && this.tasks[idx]) {
-          (this.tasks[idx] as any).dependencies = newDeps.map(d => ({ depTask: d.depTask, depRelation: d.depRelation }));
+          // store normalized relations locally
+          (this.tasks[idx] as any).dependencies = normalizedNewDeps.map(d => ({ depTask: d.depTask, depRelation: d.depRelation }));
         }
 
         return true;

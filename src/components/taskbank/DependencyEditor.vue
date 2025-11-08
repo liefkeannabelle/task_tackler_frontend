@@ -10,7 +10,11 @@
 
     <form @submit.prevent="addDep">
       <input v-model="task2" placeholder="Other task ID" required />
-      <input v-model="relation" placeholder="Relation (string)" required />
+      <select v-model="relation" required>
+        <option value="">-- select relation --</option>
+        <option value="precedes">precedes</option>
+        <option value="follows">follows</option>
+      </select>
       <button type="submit">Add</button>
       <button type="button" @click="$emit('close')">Close</button>
     </form>
@@ -36,7 +40,7 @@ function addDep() {
   const adder = auth.username ?? (auth as any)?._id ?? '';
   if (!adder) { alert('Please sign in to add dependencies.'); return; }
   if (!task2.value || !relation.value) return;
-  emit('add-dep', { adder, task1: props.taskId, task2: task2.value, dependency: relation.value });
+  emit('add-dep', { adder, task1: props.taskId, task2: task2.value, dependency: String(relation.value).toLowerCase() });
   task2.value = '';
   relation.value = '';
 }

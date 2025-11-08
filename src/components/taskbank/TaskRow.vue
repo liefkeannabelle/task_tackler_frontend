@@ -1,5 +1,5 @@
 <template>
-  <div class="task-row">
+  <div class="task-row" :id="`task-${task._id ?? task.taskName ?? task.name ?? ''}`">
     <div class="meta">
       <strong>{{ task.taskName || task.name }}</strong>
       <small v-if="task.description"> — {{ task.description }}</small>

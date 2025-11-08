@@ -4,7 +4,8 @@
 
 
 
-    <AddTaskForm @add="onAdd" />
+  <TaskSearch :ownerId="auth.username ?? (auth as any)?._id" />
+  <AddTaskForm @add="onAdd" />
 
     <div v-if="taskBank.loading">Loading tasks...</div>
     <div v-if="taskBank.error" class="error">{{ taskBank.error }}</div>
@@ -38,6 +39,7 @@ import { useAuthStore } from '../stores/auth';
 import TaskRow from '../components/taskbank/TaskRow.vue';
 import AddTaskForm from '../components/taskbank/AddTaskForm.vue';
 import TaskDepsEditor from '../components/taskbank/TaskDepsEditor.vue';
+import TaskSearch from '../components/taskbank/TaskSearch.vue';
 
 const taskBank = useTaskBankStore();
 const auth = useAuthStore();
