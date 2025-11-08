@@ -61,6 +61,8 @@ import { useTaskBankStore } from '../../stores/taskbank';
 import { useListsStore } from '../../stores/lists';
 
 const props = defineProps<{ list?: Record<string, any> }>();
+// Provide a safe non-null `list` binding for template and script usage
+const list = (props.list ?? {}) as Record<string, any>;
 const emit = defineEmits<{
   (e: 'add-task', payload: { listId: string; task: string; adder?: string }): void;
   (e: 'delete-task', payload: { listId: string; taskId: string; deleter?: string }): void;
@@ -80,7 +82,7 @@ const selectedTaskName = ref('');
 
 // list items safe accessor (avoids reading undefined)
 const items = computed(() => {
-  const li = props.list?.listItems;
+  const li = list.listItems;
   return Array.isArray(li) ? li : [];
 });
 
@@ -118,7 +120,7 @@ function addTask() {
     alert('Please select a task from the results (do not type free text).');
     return;
   }
-  const listId = (props.list?._id) ?? (props.list?.list);
+  const listId = (list._id) ?? (list.list);
   if (!listId) {
     alert('Cannot determine list id.');
     return;
@@ -149,12 +151,12 @@ watch(search, (v) => {
 // confirm and delete list using store; emit event on success
 async function confirmDelete() {
   try {
-    console.debug('[ListCard] confirmDelete clicked', props.list);
-    const current = props.list;
-    const label = current.title || current.listName || current._id || 'this list';
+  console.debug('[ListCard] confirmDelete clicked', list);
+  const current = list || {};
+  const label = current.title || current.listName || current._id || 'this list';
     if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
 
-    const id = current._id || current.list;
+  const id = current._id || current.list;
     if (!id) {
       console.warn('[ListCard] cannot determine list id', current);
       alert('Cannot determine list id to delete.');
