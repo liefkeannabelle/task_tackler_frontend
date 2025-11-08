@@ -60,7 +60,7 @@ import { useTaskBankStore } from '../../stores/taskbank';
 // auth store intentionally not required here; parent flows supply adder/deleter when needed
 import { useListsStore } from '../../stores/lists';
 
-const props = defineProps<{ list: Record<string, any> }>();
+const props = defineProps<{ list?: Record<string, any> }>();
 const emit = defineEmits<{
   (e: 'add-task', payload: { listId: string; task: string; adder?: string }): void;
   (e: 'delete-task', payload: { listId: string; taskId: string; deleter?: string }): void;
@@ -118,7 +118,7 @@ function addTask() {
     alert('Please select a task from the results (do not type free text).');
     return;
   }
-  const listId = props.list._id ?? props.list.list;
+  const listId = (props.list?._id) ?? (props.list?.list);
   if (!listId) {
     alert('Cannot determine list id.');
     return;
