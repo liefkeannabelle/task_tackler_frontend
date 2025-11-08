@@ -56,11 +56,12 @@
 <script setup lang="ts">
 import ListItemRow from './ListItemRow.vue';
 import { ref, computed, watch } from 'vue';
+import type { ListDocument } from '../../api/client';
 import { useTaskBankStore } from '../../stores/taskbank';
 // auth store intentionally not required here; parent flows supply adder/deleter when needed
 import { useListsStore } from '../../stores/lists';
 
-const props = defineProps<{ list?: Record<string, any> }>();
+const props = defineProps<{ list?: ListDocument }>();
 // Provide a safe non-null `list` binding for template and script usage
 const list = (props.list ?? {}) as Record<string, any>;
 const emit = defineEmits<{
