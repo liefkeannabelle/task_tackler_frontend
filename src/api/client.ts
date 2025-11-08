@@ -1,6 +1,7 @@
 // Generate a function that POSTs to /api/session/start
 // ...existing code...
-export const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? '';
+// export const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? '';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export interface StartSessionRequest {
   // add fields your backend expects
