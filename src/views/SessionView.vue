@@ -3,6 +3,7 @@
     <h1>Sessions</h1>
 
     <div v-if="showCreate" class="create-session-modal">
+      <h3>Configure your session</h3>
       <CreateSessionForm @create="handleCreate" />
       <button class="cancel" @click="showCreate = false">Cancel</button>
     </div>
@@ -10,7 +11,7 @@
     <div v-if="store.loading">Loading...</div>
     <div v-if="store.error" class="error">{{ store.error }}</div>
 
-    <section class="session-summary" v-if="userId">
+  <section class="session-summary" v-if="userId && !isConfiguring && !showCreate">
       <h3>Your session</h3>
 
       <div v-if="displayedSession">
@@ -28,7 +29,7 @@
             {{ ending ? 'Ending…' : 'End session' }}
           </button>
 
-          <button @click="openCreate">Change session</button>
+          <button v-if="!displayedSession.active" @click="openCreate">Change session</button>
         </div>
       </div>
 
@@ -39,20 +40,35 @@
 
     </section>
 
-    <SessionList
-      v-if="store.activeSession"
-      :key="sessionListKey"
-      :session="store.activeSession"
-      :items="itemsWithNames"
-      :task-statuses="store.taskStatuses"
-      @start-task="store.startTask"
-      @complete-task="store.completeTask"
-      @add-item="store.addListItem"
-      @remove-item="store.removeListItem"
-      @end-session="onEndActive"
-      @end-session-no-confirm="onEndActiveNoConfirm"
-      @refresh-items="() => store.loadSessionListItems(store.activeSession!._id || store.activeSession!.session)"
-    />
+  <template v-if="store.activeSession && (store.activeSession.active === true)">
+      <TaskByTask
+        v-if="(store.activeSession?.format || '').toLowerCase() === 'task-by-task'"
+        :key="sessionListKey + ':bytask'"
+        :session="store.activeSession"
+        :items="itemsWithNames"
+        :task-statuses="store.taskStatuses"
+        @start-task="store.startTask"
+        @complete-task="store.completeTask"
+        @end-session-no-confirm="onEndActiveNoConfirm"
+        @end-session="onEndActive"
+        @refresh-items="() => store.loadSessionListItems(store.activeSession!._id || store.activeSession!.session)"
+      />
+
+      <SessionList
+        v-else
+        :key="sessionListKey"
+        :session="store.activeSession"
+        :items="itemsWithNames"
+        :task-statuses="store.taskStatuses"
+        @start-task="store.startTask"
+        @complete-task="store.completeTask"
+        @add-item="store.addListItem"
+        @remove-item="store.removeListItem"
+        @end-session="onEndActive"
+        @end-session-no-confirm="onEndActiveNoConfirm"
+        @refresh-items="() => store.loadSessionListItems(store.activeSession!._id || store.activeSession!.session)"
+      />
+    </template>
   </div>
 </template>
 
@@ -63,6 +79,7 @@ import { useAuthStore } from '../stores/auth';
 import { useTaskBankStore } from '../stores/taskbank';
 import CreateSessionForm from '../components/session/CreateSessionForm.vue';
 import SessionList from '../components/session/SessionList.vue';
+import TaskByTask from '../components/session/TaskByTask.vue';
 
 const store = useSessionStore();
 const auth = useAuthStore();
@@ -71,6 +88,7 @@ const taskBank = useTaskBankStore();
 const showCreate = ref(false);
 const activating = ref(false);
 const ending = ref(false);
+const isConfiguring = ref(false);
 
 const userId = computed(() => auth.username ?? (auth as any)?._id ?? '');
 
@@ -225,6 +243,22 @@ onMounted(async () => {
     console.debug('[SessionView] itemsWithNames (computed)', itemsWithNames.value);
   }
 });
+
+// listen for global configuring events from SessionControls (or other UI)
+function onSessionConfigEvent(e: any) {
+  try { isConfiguring.value = !!e?.detail; } catch (err) { isConfiguring.value = false; }
+}
+window.addEventListener('session-configuring', onSessionConfigEvent as EventListener);
+
+// make sure we clean up if this module is hot-reloaded / unmounted
+try {
+  // @ts-ignore - Vue unmount lifecycle handled by framework; ensure listener removal on HMR
+  if (import.meta && import.meta.hot) {
+    import.meta.hot.on('vite:beforeFullReload', () => {
+      window.removeEventListener('session-configuring', onSessionConfigEvent as EventListener);
+    });
+  }
+} catch (e) { /* ignore in non-Vite contexts */ }
 
 function openCreate() { showCreate.value = true; }
 

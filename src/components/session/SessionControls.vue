@@ -1,6 +1,8 @@
 // ...existing code...
 <template>
   <div class="session-controls">
+    <h3 class="session-config-header">Configure your session</h3>
+
     <div class="row">
       <label>Select session:</label>
       <select v-model="selected" @change="emitChange">
@@ -11,7 +13,9 @@
       </select>
 
       <button @click="create">Create/Change</button>
-      <button @click="$emit('create-session')">Create Session</button>
+      <button @click="startConfigThenEmitCreate">Create Session</button>
+
+      <button v-if="configuring" @click="cancelConfig">Done</button>
 
     </div>
 
@@ -44,9 +48,10 @@ const props = defineProps<{
   active: Record<string, any> | null;
 }>();
 
+// allow create-session to be emitted without a payload (UI may open a modal)
 const emit = defineEmits<{
   (e: 'change-active', sessionId: string | null): void;
-  (e: 'create-session', payload: { list: string; sessionOwner: string }): void;
+  (e: 'create-session', payload?: { list: string; sessionOwner: string }): void;
   (e: 'change-session', payload: { list: string; sessionOwner: string }): void;
   (e: 'set-ordering', payload: { session: string; newType: string; setter: string }): void;
   (e: 'set-format', payload: { session: string; newFormat: string; setter: string }): void;
@@ -54,6 +59,7 @@ const emit = defineEmits<{
   (e: 'activate', payload: { session: string; activator: string }): void;
   (e: 'end', payload: { session: string }): void;
   (e: 'delete', payload: { session: string }): void;
+  (e: 'configuring', value: boolean): void;
 }>();
 
 const auth = useAuthStore();
@@ -66,15 +72,42 @@ const setter = ref(auth.username || '');
 const setterPlaceholder = auth.username ? 'Your ID' : 'Your ID (login to default)';
 watch(() => auth.username, v => { if (v) setter.value = v; });
 
+const configuring = ref(false);
+
+function setConfig(val: boolean) {
+  configuring.value = val;
+  // let any ancestor listen in without a tight component embedding
+  try { window.dispatchEvent(new CustomEvent('session-configuring', { detail: val })); } catch (e) { /* ignore */ }
+  emit('configuring', val);
+}
+
 function emitChange() {
   emit('change-active', selected.value || null);
 }
 
 function create() {
+  // mark UI as configuring while we run the flow
+  setConfig(true);
   const list = prompt('List ID for new session:') || '';
   const sessionOwner = prompt('Owner ID:') || auth.username || '';
-  if (!list || !sessionOwner) return;
+  if (!list || !sessionOwner) {
+    // cancelled or invalid — turn off configuring
+    setConfig(false);
+    return;
+  }
   emit('create-session', { list, sessionOwner });
+  setConfig(false);
+}
+
+function startConfigThenEmitCreate() {
+  // start configuring mode and notify parent; also emit the original create-session signal
+  setConfig(true);
+  // emit create-session without payload — parent/modal can react
+  emit('create-session');
+}
+
+function cancelConfig() {
+  setConfig(false);
 }
 
 function setOrdering() {
