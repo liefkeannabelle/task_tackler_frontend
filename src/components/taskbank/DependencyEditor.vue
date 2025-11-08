@@ -46,7 +46,7 @@ function addDep() {
 }
 
 function deleteDep(d: Record<string, any>) {
-  const deleter = auth.username ?? (auth as any)?._id ?? prompt('Your ID to delete this dependency:') || '';
+  const deleter = (auth.username ?? (auth as any)?._id ?? prompt('Your ID to delete this dependency:')) || '';
   if (!deleter) return;
   emit('delete-dep', { deleter, sourceTask: props.taskId, targetTask: d.depTask, relation: d.depRelation || d.dependency || '' });
 }

@@ -85,14 +85,7 @@ const allComplete = computed(() => {
 const taskId = ref('');
 const defaultOrder = ref<number | null>(null);
 
-function addItem() {
-  const sid = props.session?._id ?? props.session?.session;
-  if (!sid) return;
-  if (!taskId.value) return;
-  emit('add-item', { session: sid, task: taskId.value, defaultOrder: defaultOrder.value ?? undefined });
-  taskId.value = '';
-  defaultOrder.value = null;
-}
+// add-item UI not currently used; remove to avoid unused-declaration build errors
 
 function start(payload: { task: string }) {
   const sid = props.session?._id ?? props.session?.session;
@@ -106,11 +99,7 @@ function complete(payload: { task: string }) {
   emit('complete-task', { session: sid, task: payload.task });
 }
 
-function remove(payload: { task: string }) {
-  const sid = props.session?._id ?? props.session?.session;
-  if (!sid || !payload?.task) return;
-  emit('remove-item', { session: sid, task: payload.task });
-}
+// remove-item UI not currently used; remove to avoid unused-declaration build errors
 
 function onEndSession() {
   // Emit a special event that indicates no confirmation should be requested by the parent.

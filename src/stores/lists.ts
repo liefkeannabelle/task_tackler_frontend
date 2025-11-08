@@ -1,14 +1,12 @@
 // ...existing code...
 import { defineStore } from 'pinia';
-import type { ListDocument, ListItem } from '../api/client';
+import type { ListDocument } from '../api/client';
 import { deleteList as apiDeleteList } from '../api/client';
 import {
   getLists,
   newList,
   addTaskToList,
   deleteTaskFromList,
-  assignOrderInList,
-  getTasksInList,
   getListById,
   getListsByOwner as apiGetListsByOwner,
   assignOrderInList as apiAssignOrder

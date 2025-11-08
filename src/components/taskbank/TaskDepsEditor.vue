@@ -100,8 +100,9 @@ function removeDep(entry: { depTask: string; depRelation: string }) {
 }
 
 function onSave() {
-  if (!props.task) return;
-  emit('save', { taskId: props.task._id ?? props.task.taskName ?? '', dependencies: deps.value });
+  const t = props.task;
+  if (!t) return;
+  emit('save', { taskId: t._id ?? t.taskName ?? '', dependencies: deps.value });
 }
 </script>
 

@@ -57,7 +57,7 @@
 import ListItemRow from './ListItemRow.vue';
 import { ref, computed, watch } from 'vue';
 import { useTaskBankStore } from '../../stores/taskbank';
-import { useAuthStore } from '../../stores/auth';
+// auth store intentionally not required here; parent flows supply adder/deleter when needed
 import { useListsStore } from '../../stores/lists';
 
 const props = defineProps<{ list: Record<string, any> }>();
@@ -69,7 +69,6 @@ const emit = defineEmits<{
 }>();
 
 const taskBank = useTaskBankStore();
-const auth = useAuthStore();
 const listsStore = useListsStore();
 
 // UI state used by the template

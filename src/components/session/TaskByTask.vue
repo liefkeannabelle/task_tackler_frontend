@@ -1,7 +1,7 @@
 <template>
   <div class="task-by-task">
     <header class="bytask-header">
-  <h3>{{ session.title ?? 'Session' }}</h3>
+    <h3>{{ session?.title ?? 'Session' }}</h3>
       <div class="progress">
         <template v-if="!allComplete">{{ currentIndexDisplay }} / {{ totalItems }}</template>
         <template v-else>{{ totalItems }} / {{ totalItems }}</template>

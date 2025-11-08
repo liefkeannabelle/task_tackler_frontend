@@ -14,7 +14,7 @@
         placeholder="Search your tasks..."
         aria-autocomplete="list"
         aria-controls="task-search-results"
-        :aria-expanded="showResults.toString()"
+  :aria-expanded="showResults"
       />
       <button v-if="query" @click="clear" aria-label="Clear search">✕</button>
     </div>

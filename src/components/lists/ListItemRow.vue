@@ -19,7 +19,7 @@ import { useTaskBankStore } from '../../stores/taskbank';
 import { useAuthStore } from '../../stores/auth';
 import type { ListItem } from '../../api/client';
 
-const props = defineProps<{ listId: string; item: ListItem }>();
+const props = defineProps<{ listId: string; item: ListItem; listOwner?: string }>();
 
 const taskBank = useTaskBankStore();
 const auth = useAuthStore();
@@ -50,12 +50,7 @@ const emit = defineEmits<{
 }>();
 
 function requestDelete() {
-  const owner = props.listOwner ?? '';
-  const user = auth.username ?? '';
-
-  // If logged-in user is the owner, use it silently.
-  // Otherwise ask (or block) — backend requires deleter === owner
-
+  // prefer the logged-in username as the deleter; prompt as a last resort
   const deleter = auth.username ?? '';
   if (!deleter) {
     alert('Please log in to delete items.');

@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '/src/stores/auth.ts';
+import { useAuthStore } from '../../stores/auth';
 
 const props = defineProps<{ task: Record<string, any> }>();
 const emit = defineEmits<{ (e: 'delete', payload: { deleter: string; task: string }): void; (e: 'edit-deps', task: Record<string, any>): void }>();
