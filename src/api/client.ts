@@ -131,7 +131,7 @@ export async function getTasksInList(body: GetTasksInListRequest): Promise<ListI
 // ...existing code...
 /* POST /ListCreation/getListsByOwner */
 export interface ListCreationGetListsByOwnerRequest { owner: string }
-export interface ListCreationGetListsByOwnerResponse { lists: any[] }
+export interface ListCreationGetListsByOwnerResponse { lists: ListDocument[] }
 
 export async function getListsByOwner(body: ListCreationGetListsByOwnerRequest): Promise<ListCreationGetListsByOwnerResponse> {
   // backend exposes _getListsByOwner under /api

@@ -336,17 +336,17 @@ export const useListsStore = defineStore('lists', {
         if (owner && String(owner).trim()) {
           const payload: any = { owner: String(owner).trim() };
           const res: any = await apiGetListsByOwner(payload);
-          if (res && Array.isArray(res.lists)) this.lists = res.lists; else this.lists = [];
+          if (res && Array.isArray(res.lists)) this.lists = (res.lists.filter(Boolean) as ListDocument[]); else this.lists = [] as ListDocument[];
         } else if (username) {
           // Prefer owner-scoped backend call (backend accepts username or owner id)
           const ownerId = (auth as any)?._id ?? (auth as any)?.id ?? (auth as any)?.userId;
           const payload: any = ownerId ? { ownerId } : { owner: username };
           const res: any = await apiGetListsByOwner(payload);
-          if (res && Array.isArray(res.lists)) this.lists = res.lists; else this.lists = [];
+          if (res && Array.isArray(res.lists)) this.lists = (res.lists.filter(Boolean) as ListDocument[]); else this.lists = [] as ListDocument[];
         } else {
           // fallback to global fetch (should not happen for logged-in flows)
           const raw = await getLists();
-          this.lists = Array.isArray(raw) ? raw : [];
+          this.lists = Array.isArray(raw) ? (raw.filter(Boolean) as ListDocument[]) : [];
         }
 
         if (typeof (this as any)._enrichListItems === 'function') {
