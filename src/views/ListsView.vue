@@ -69,10 +69,13 @@ async function onSearchSelect(list: any | undefined) {
     const idx = (store.lists || []).findIndex((l: any) => l._id === list._id || l.id === list._id);
     if (idx > 0) {
       const copy = [...(store.lists || [])];
-      const [item] = copy.splice(idx, 1);
-      copy.unshift(item);
+      // splice may technically return an empty array at the type level; narrow safely
+      const item = copy.splice(idx, 1)[0];
+      if (item !== undefined) {
+        copy.unshift(item);
+      }
       // update store lists locally (non-persistent)
-      store.lists = copy as any;
+      store.lists = (copy.filter(Boolean) as ListDocument[]);
       // Optionally focus the moved element after DOM updates
       setTimeout(() => {
         const el = document.getElementById(targetId);
