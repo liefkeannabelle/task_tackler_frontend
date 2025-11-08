@@ -13,8 +13,8 @@
       </div>
       <div v-if="store.loading">Loading...</div>
       <div v-if="store.error" class="error">{{ store.error }}</div>
-      <div v-for="l in (store.lists || []).filter(Boolean)" :key="l._id" :id="'list-' + (l._id ?? l.id)" tabindex="-1">
-  <ListCard :list="(l as any)" @add-task="onAddTask" @delete-task="onDeleteTask" @assign-order="onAssignOrder" />
+      <div v-for="l in definedLists" :key="l._id" :id="'list-' + (l._id ?? (l as any).id)" tabindex="-1">
+        <ListCard :list="l" @add-task="onAddTask" @delete-task="onDeleteTask" @assign-order="onAssignOrder" />
       </div>
     </div>
   </div>
@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { onMounted, watch, nextTick, computed } from 'vue';
 import { useListsStore } from '../stores/lists';
+import type { ListDocument } from '../api/client';
 import { useTaskBankStore } from '../stores/taskbank';
 import { useAuthStore } from '../stores/auth';
 import NewListForm from '../components/lists/NewListForm.vue';
@@ -90,6 +91,13 @@ async function loadAll() {
     taskBank.fetchAll(auth.username || undefined)
   ]);
 }
+
+// Narrowed list array exposed to template so vue-tsc knows items are non-null
+const definedLists = computed((): ListDocument[] => {
+  const arr = store.lists ?? [];
+  return arr.filter((x): x is ListDocument => Boolean(x));
+});
+
 const userId = computed(() => auth.username ?? (auth as any)?._id ?? '');
 
 onMounted(async () => {
